@@ -12,14 +12,15 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Stores the built-in levels on startup. Levels already in the database are
- * left as they are, so the seeder is safe to run on every start.
+ * Stores the built-in levels on startup. Each one is written over its stored
+ * copy by id, so edits to the catalog file reach the database on the next
+ * start and running the seeder again changes nothing.
  */
 @Component
 public class LevelSeeder implements ApplicationRunner {
 
     /** Classpath location of the built-in level catalog. */
-    static final String CATALOG = "levels/tangram.json";
+    static final String CATALOG = "levels/pictures.json";
 
     private static final Logger LOG = LoggerFactory.getLogger(LevelSeeder.class);
 
@@ -39,10 +40,8 @@ public class LevelSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        List<Level> missing = LevelCatalog.read(new ClassPathResource(CATALOG), mapper).stream()
-                .filter(level -> !levels.existsById(level.id()))
-                .toList();
-        levels.saveAll(missing);
-        LOG.info("Seeded {} new level(s)", missing.size());
+        List<Level> builtIn = LevelCatalog.read(new ClassPathResource(CATALOG), mapper);
+        levels.saveAll(builtIn);
+        LOG.info("Stored {} built-in level(s)", builtIn.size());
     }
 }

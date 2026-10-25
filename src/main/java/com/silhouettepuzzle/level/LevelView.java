@@ -12,9 +12,9 @@ import com.silhouettepuzzle.geometry.Outline;
  * @param name       display name
  * @param number     position in the level list
  * @param silhouette parts of the figure to assemble, in board coordinates
- * @param pieces     piece outlines in their own coordinates
+ * @param pieces     the parts: name, colour, shape around its own origin and start rotation
  */
-public record LevelView(String id, String name, int number, List<Outline> silhouette, List<Outline> pieces) {
+public record LevelView(String id, String name, int number, List<Outline> silhouette, List<Piece> pieces) {
 
     /**
      * Creates the client view of a stored level.

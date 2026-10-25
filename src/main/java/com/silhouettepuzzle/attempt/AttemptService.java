@@ -91,7 +91,7 @@ public class AttemptService {
                             + placements.size() + " placements");
         }
 
-        CheckResult result = checker.check(level.silhouette(), level.pieces(), placements);
+        CheckResult result = checker.check(level.silhouette(), level.pieceOutlines(), placements);
         if (!result.solved()) {
             return SubmitResult.unsolved(result);
         }

@@ -66,14 +66,14 @@ class LeaderboardFlowTest {
         MockHttpSession alice = player("alice");
         MockHttpSession bob = player("bob");
         MockHttpSession carol = player("carol");
-        solve(alice, "square", 30, 20);
-        solve(alice, "square", 25, 30);
-        solve(bob, "square", 25, 10);
-        solve(carol, "square", 40, 5);
-        solve(null, "square", 1, 1);
-        start(player("dave"), "square");
+        solve(alice, "bus", 30, 20);
+        solve(alice, "bus", 25, 30);
+        solve(bob, "bus", 25, 10);
+        solve(carol, "bus", 40, 5);
+        solve(null, "bus", 1, 1);
+        start(player("dave"), "bus");
 
-        mvc.perform(get("/api/levels/square/leaderboard"))
+        mvc.perform(get("/api/levels/bus/leaderboard"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3))
                 .andExpect(jsonPath("$[0].rank").value(1))
@@ -86,14 +86,14 @@ class LeaderboardFlowTest {
 
     @Test
     void limitsTheLeaderboard() throws Exception {
-        solve(player("alice"), "square", 10, 1);
-        solve(player("bob"), "square", 20, 1);
+        solve(player("alice"), "bus", 10, 1);
+        solve(player("bob"), "bus", 20, 1);
 
-        mvc.perform(get("/api/levels/square/leaderboard").param("limit", "1"))
+        mvc.perform(get("/api/levels/bus/leaderboard").param("limit", "1"))
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].username").value("alice"));
-        mvc.perform(get("/api/levels/square/leaderboard").param("limit", "0")).andExpect(status().isBadRequest());
-        mvc.perform(get("/api/levels/square/leaderboard").param("limit", "101")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/levels/bus/leaderboard").param("limit", "0")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/levels/bus/leaderboard").param("limit", "101")).andExpect(status().isBadRequest());
     }
 
     @Test
@@ -104,24 +104,24 @@ class LeaderboardFlowTest {
     @Test
     void showsPersonalBestsPerLevel() throws Exception {
         MockHttpSession alice = player("alice");
-        solve(alice, "square", 30, 20);
-        solve(alice, "square", 25, 30);
-        solve(alice, "triangle", 50, 12);
-        solve(player("bob"), "square", 5, 5);
+        solve(alice, "bus", 30, 20);
+        solve(alice, "bus", 25, 30);
+        solve(alice, "house", 50, 12);
+        solve(player("bob"), "bus", 5, 5);
 
         mvc.perform(get("/api/me/progress").session(alice))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].levelId").value("square"))
+                .andExpect(jsonPath("$[0].levelId").value("bus"))
                 .andExpect(jsonPath("$[0].solves").value(2))
                 .andExpect(jsonPath("$[0].bestTimeMs").value(25_000))
                 .andExpect(jsonPath("$[0].fewestMoves").value(20))
-                .andExpect(jsonPath("$[1].levelId").value("triangle"));
+                .andExpect(jsonPath("$[1].levelId").value("house"));
     }
 
     @Test
     void anotherPlayersAttemptCannotBeSubmitted() throws Exception {
-        String attemptId = start(player("alice"), "square");
+        String attemptId = start(player("alice"), "bus");
 
         submit(player("bob"), attemptId, 1).andExpect(status().isNotFound());
         submit(null, attemptId, 1).andExpect(status().isNotFound());

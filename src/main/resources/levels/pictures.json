@@ -1,0 +1,82 @@
+{
+    "colors": {
+        "busYellow": "#E5B54E",
+        "glass": "#8FC6EA",
+        "trim": "#7A8196",
+        "chrome": "#A9B0C1",
+        "lamp": "#F4DC8C",
+        "tyre": "#737A8F",
+        "tiles": "#D97C62",
+        "brick": "#B9705A",
+        "plaster": "#E2CDA6",
+        "wood": "#B08259",
+        "eave": "#9A6B4B",
+        "sill": "#E9ECF2",
+        "stone": "#9DA3B6",
+        "red": "#E06D62",
+        "silver": "#C9D0DC",
+        "steel": "#949DB0",
+        "flame": "#F0A24F"
+    },
+    "levels": [
+        {
+            "id": "bus",
+            "name": "Bus",
+            "number": 1,
+            "parts": [
+                {"name": "Roof", "color": "busYellow", "outline": [[0, 0], [8, 0], [8, 0.6], [0, 0.6]], "startRotation": 0},
+                {"name": "Window", "color": "glass", "outline": [[0, 0.6], [2.2, 0.6], [2.2, 3], [0, 3]], "startRotation": 0},
+                {"name": "Pillar", "color": "busYellow", "outline": [[2.2, 0.6], [2.5, 0.6], [2.5, 3], [2.2, 3]], "startRotation": 0},
+                {"name": "Window", "color": "glass", "outline": [[2.5, 0.6], [4.7, 0.6], [4.7, 3], [2.5, 3]], "startRotation": 90},
+                {"name": "Pillar", "color": "busYellow", "outline": [[4.7, 0.6], [5, 0.6], [5, 3], [4.7, 3]], "startRotation": 0},
+                {"name": "Door", "color": "glass", "outline": [[5, 0.6], [6.5, 0.6], [6.5, 4.6], [5, 4.6]], "startRotation": 90},
+                {"name": "Narrow window", "color": "glass", "outline": [[6.5, 0.6], [7.7, 0.6], [7.7, 3], [6.5, 3]], "startRotation": 0},
+                {"name": "Pillar", "color": "busYellow", "outline": [[7.7, 0.6], [8, 0.6], [8, 3], [7.7, 3]], "startRotation": 0},
+                {"name": "Windshield", "color": "glass", "outline": [[8, 0], [9, 0], [10, 1], [10, 2.4], [8, 2.4]], "startRotation": 180},
+                {"name": "Trim", "color": "trim", "outline": [[0, 3], [5, 3], [5, 3.3], [0, 3.3]], "startRotation": 0},
+                {"name": "Trim", "color": "trim", "outline": [[6.5, 3], [8, 3], [8, 3.3], [6.5, 3.3]], "startRotation": 0},
+                {"name": "Body panel", "color": "busYellow", "outline": [[0, 3.3], [5, 3.3], [5, 4.6], [0, 4.6]], "startRotation": 0},
+                {"name": "Body panel", "color": "busYellow", "outline": [[6.5, 3.3], [8, 3.3], [8, 4.6], [6.5, 4.6]], "startRotation": 90},
+                {"name": "Cab", "color": "busYellow", "outline": [[8, 2.4], [10, 2.4], [10, 3.2], [9.5, 3.2], [9.5, 3.7], [10, 3.7], [10, 4.6], [8, 4.6]], "startRotation": 180},
+                {"name": "Headlight", "color": "lamp", "outline": [[9.5, 3.2], [10, 3.2], [10, 3.7], [9.5, 3.7]], "startRotation": 0},
+                {"name": "Bumper", "color": "chrome", "outline": [[0, 4.6], [10, 4.6], [10, 5], [0, 5]], "startRotation": 0},
+                {"name": "Wheel", "color": "tyre", "outline": [[1.2, 5], [2.4, 5], [2.4, 6.2], [1.2, 6.2]], "startRotation": 45},
+                {"name": "Wheel", "color": "tyre", "outline": [[7.2, 5], [8.4, 5], [8.4, 6.2], [7.2, 6.2]], "startRotation": 0}
+            ]
+        },
+        {
+            "id": "house",
+            "name": "House",
+            "number": 2,
+            "parts": [
+                {"name": "Roof", "color": "tiles", "outline": [[0, 3.5], [3.5, 0], [7, 3.5]], "startRotation": 180},
+                {"name": "Chimney", "color": "brick", "outline": [[5, 0.6], [5.8, 0.6], [5.8, 2.3], [5, 1.5]], "startRotation": 90},
+                {"name": "Eave", "color": "eave", "outline": [[0.3, 3.5], [6.7, 3.5], [6.7, 3.8], [0.3, 3.8]], "startRotation": 0},
+                {"name": "Wall", "color": "plaster", "outline": [[0.5, 3.8], [2.6, 3.8], [2.6, 4.6], [1.2, 4.6], [1.2, 6.8], [0.5, 6.8]], "startRotation": 90},
+                {"name": "Wall", "color": "plaster", "outline": [[2.6, 3.8], [6.5, 3.8], [6.5, 4.4], [3.8, 4.4], [3.8, 6.8], [2.6, 6.8]], "startRotation": 0},
+                {"name": "Wall", "color": "plaster", "outline": [[5.8, 4.4], [6.5, 4.4], [6.5, 6.8], [3.8, 6.8], [3.8, 6.15], [5.8, 6.15]], "startRotation": 180},
+                {"name": "Door", "color": "wood", "outline": [[1.2, 4.6], [2.6, 4.6], [2.6, 6.8], [1.2, 6.8]], "startRotation": 0},
+                {"name": "Window", "color": "glass", "outline": [[3.8, 4.4], [5.8, 4.4], [5.8, 5.9], [3.8, 5.9]], "startRotation": 0},
+                {"name": "Sill", "color": "sill", "outline": [[3.8, 5.9], [5.8, 5.9], [5.8, 6.15], [3.8, 6.15]], "startRotation": 0},
+                {"name": "Foundation", "color": "stone", "outline": [[0.3, 6.8], [6.7, 6.8], [6.7, 7.3], [0.3, 7.3]], "startRotation": 0}
+            ]
+        },
+        {
+            "id": "rocket",
+            "name": "Rocket",
+            "number": 3,
+            "parts": [
+                {"name": "Nose cone", "color": "red", "outline": [[1, 2], [2, 0], [3, 2]], "startRotation": 180},
+                {"name": "Hull", "color": "silver", "outline": [[1, 2], [2, 2], [2, 2.4], [1.4, 3], [2, 3.6], [2, 4], [1, 4]], "startRotation": 0},
+                {"name": "Hull", "color": "silver", "outline": [[3, 2], [3, 4], [2, 4], [2, 3.6], [2.6, 3], [2, 2.4], [2, 2]], "startRotation": 0, "mirrored": true},
+                {"name": "Porthole", "color": "glass", "outline": [[2, 2.4], [2.6, 3], [2, 3.6], [1.4, 3]], "startRotation": 0},
+                {"name": "Stripe", "color": "red", "outline": [[1, 4], [3, 4], [3, 4.4], [1, 4.4]], "startRotation": 90},
+                {"name": "Body", "color": "silver", "outline": [[1, 4.4], [3, 4.4], [3, 6.5], [1, 6.5]], "startRotation": 0},
+                {"name": "Nozzle", "color": "steel", "outline": [[1, 6.5], [3, 6.5], [3, 7.5], [1, 7.5]], "startRotation": 0},
+                {"name": "Fin", "color": "red", "outline": [[0, 7.5], [1, 5.5], [1, 7.5]], "startRotation": 0},
+                {"name": "Fin", "color": "red", "outline": [[3, 5.5], [4, 7.5], [3, 7.5]], "startRotation": 0, "mirrored": true},
+                {"name": "Flame", "color": "flame", "outline": [[1.4, 7.5], [2.6, 7.5], [2, 8.7]], "startRotation": 180}
+            ]
+        }
+    ]
+}

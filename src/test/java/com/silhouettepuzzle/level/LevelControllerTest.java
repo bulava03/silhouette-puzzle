@@ -47,13 +47,16 @@ class LevelControllerTest {
     @Test
     void returnsALevelWithoutItsSolution() throws Exception {
         when(levels.findById("unit")).thenReturn(Optional.of(new Level("unit", "Unit", 1,
-                List.of(UNIT), List.of(UNIT), List.of(new Placement(0, 0, 0, false)))));
+                List.of(UNIT), List.of(new Piece("Tile", "#E5B54E", UNIT, 90)), List.of(new Placement(0, 0, 0, false)))));
 
         mvc.perform(get("/api/levels/unit"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Unit"))
                 .andExpect(jsonPath("$.silhouette[0].vertices[2].x").value(1.0))
                 .andExpect(jsonPath("$.pieces.length()").value(1))
+                .andExpect(jsonPath("$.pieces[0].name").value("Tile"))
+                .andExpect(jsonPath("$.pieces[0].color").value("#E5B54E"))
+                .andExpect(jsonPath("$.pieces[0].startRotation").value(90))
                 .andExpect(jsonPath("$.solution").doesNotExist());
     }
 

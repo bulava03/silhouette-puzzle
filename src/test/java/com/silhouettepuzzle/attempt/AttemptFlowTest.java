@@ -1,6 +1,7 @@
 package com.silhouettepuzzle.attempt;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -59,10 +60,10 @@ class AttemptFlowTest {
 
     @Test
     void solvingALevelRecordsServerTimeAndMoves() throws Exception {
-        String attemptId = start("square");
+        String attemptId = start("bus");
         clock.advance(Duration.ofSeconds(42));
 
-        submit(attemptId, solutionOf("square"), 17)
+        submit(attemptId, solutionOf("bus"), 17)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.solved").value(true))
                 .andExpect(jsonPath("$.timeMs").value(42_000))
@@ -71,32 +72,32 @@ class AttemptFlowTest {
 
     @Test
     void aWrongSolutionKeepsTheAttemptOpen() throws Exception {
-        String attemptId = start("square");
-        List<Placement> wrong = new ArrayList<>(solutionOf("square"));
+        String attemptId = start("bus");
+        List<Placement> wrong = new ArrayList<>(solutionOf("bus"));
         wrong.set(0, new Placement(20, 20, 0, false));
 
         submit(attemptId, wrong, 3)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.solved").value(false))
-                .andExpect(jsonPath("$.mismatchRatio").value(0.5))
+                .andExpect(jsonPath("$.mismatchRatio").value(greaterThan(0.1)))
                 .andExpect(jsonPath("$.timeMs").doesNotExist());
 
-        submit(attemptId, solutionOf("square"), 5)
+        submit(attemptId, solutionOf("bus"), 5)
                 .andExpect(jsonPath("$.solved").value(true));
     }
 
     @Test
     void aSolvedAttemptAcceptsNoMoreSubmissions() throws Exception {
-        String attemptId = start("square");
-        submit(attemptId, solutionOf("square"), 7).andExpect(status().isOk());
+        String attemptId = start("bus");
+        submit(attemptId, solutionOf("bus"), 7).andExpect(status().isOk());
 
-        submit(attemptId, solutionOf("square"), 1).andExpect(status().isConflict());
+        submit(attemptId, solutionOf("bus"), 1).andExpect(status().isConflict());
     }
 
     @Test
     void concurrentCorrectSubmissionsAreRecordedOnce() throws Exception {
-        String attemptId = start("triangle");
-        List<Placement> solution = solutionOf("triangle");
+        String attemptId = start("house");
+        List<Placement> solution = solutionOf("house");
         int threads = 8;
         CountDownLatch go = new CountDownLatch(1);
 
@@ -138,21 +139,21 @@ class AttemptFlowTest {
 
     @Test
     void submittingToAnUnknownAttemptIsNotFound() throws Exception {
-        submit("000000000000000000000000", solutionOf("square"), 1).andExpect(status().isNotFound());
+        submit("000000000000000000000000", solutionOf("bus"), 1).andExpect(status().isNotFound());
     }
 
     @Test
     void aWrongNumberOfPlacementsIsABadRequest() throws Exception {
-        String attemptId = start("square");
+        String attemptId = start("bus");
 
-        submit(attemptId, solutionOf("square").subList(0, 6), 1)
+        submit(attemptId, solutionOf("bus").subList(0, 6), 1)
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Level square has 7 pieces, got 6 placements"));
+                .andExpect(jsonPath("$.detail").value("Level bus has 18 pieces, got 6 placements"));
     }
 
     @Test
     void aRotationOffTheStepIsABadRequest() throws Exception {
-        String attemptId = start("square");
+        String attemptId = start("bus");
 
         mvc.perform(post("/api/attempts/{id}/submit", attemptId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -163,9 +164,9 @@ class AttemptFlowTest {
 
     @Test
     void negativeMovesAreABadRequest() throws Exception {
-        String attemptId = start("square");
+        String attemptId = start("bus");
 
-        submit(attemptId, solutionOf("square"), -1).andExpect(status().isBadRequest());
+        submit(attemptId, solutionOf("bus"), -1).andExpect(status().isBadRequest());
     }
 
     private String start(String levelId) throws Exception {

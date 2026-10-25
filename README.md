@@ -1,7 +1,9 @@
 # Silhouette Puzzle
 
-A tangram-style puzzle game in the browser: drag, rotate and flip pieces
-until they fill the silhouette. All geometry lives on the server: a solution
+A picture-building puzzle game in the browser: every level is a picture (a
+bus, a house, a rocket) cut into its own parts, and the player drags, turns
+and flips the parts until they fill the picture's silhouette. All geometry
+lives on the server: a solution
 is accepted only when the server has checked that the placed pieces cover the
 silhouette without overlapping, so records cannot be faked from the client.
 
@@ -24,12 +26,22 @@ Testcontainers · springdoc-openapi · Checkstyle · GitHub Actions · Docker
 ## Levels
 
 Built-in levels live in
-[`src/main/resources/levels/tangram.json`](src/main/resources/levels/tangram.json)
-and are stored in MongoDB on startup. A level does not spell out its
-silhouette: it gives a reference placement of the pieces, and the server
-unites them into the silhouette with JTS, rejecting overlaps and holes. Every
-level is therefore solvable by construction. The reference solution stays on
-the server and is never sent to clients.
+[`src/main/resources/levels/pictures.json`](src/main/resources/levels/pictures.json)
+and are written to MongoDB on every start. A level is the finished picture:
+each part is drawn where it belongs, with a name and the natural colour of the
+real thing (glass windows, chrome bumper, terracotta roof). From that the
+server derives what the game needs:
+
+- each part's own shape, taken around its centre; parts marked `mirrored` are
+  handed out as their mirror image, so the player has to flip them;
+- how each part lies in the tray at the start (`startRotation`, in 45° steps);
+- the reference solution, which puts every part back in place;
+- the silhouette, the union of the placed parts built with JTS, which rejects
+  overlapping parts and holes.
+
+Every level is therefore solvable by construction. The reference solution
+stays on the server and is never sent to clients. The first picture, the bus,
+is built from the parts of the original Java version.
 
 ## API
 

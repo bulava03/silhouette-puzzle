@@ -1,6 +1,7 @@
 package com.silhouettepuzzle;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,7 @@ class SilhouettePuzzleApplicationTests {
     void seedsTheBuiltInLevelsOnStartup() {
         assertThat(levels.findAllByOrderByNumberAsc())
                 .extracting("id")
-                .containsExactly("square", "triangle", "parallelogram");
+                .containsExactly("bus", "house", "rocket");
     }
 
     @Test
@@ -42,11 +43,11 @@ class SilhouettePuzzleApplicationTests {
 
     @Test
     void storedLevelsReadBackWithTheirGeometry() {
-        assertThat(levels.findById("square")).hasValueSatisfying(level -> {
-            assertThat(level.pieces()).hasSize(7);
-            assertThat(level.solution()).hasSize(7);
+        assertThat(levels.findById("bus")).hasValueSatisfying(level -> {
+            assertThat(level.pieces()).hasSize(18);
+            assertThat(level.solution()).hasSize(18);
             assertThat(level.silhouette()).singleElement()
-                    .satisfies(part -> assertThat(part.area()).isEqualTo(16.0));
+                    .satisfies(part -> assertThat(part.area()).isCloseTo(52.38, within(1e-6)));
         });
     }
 }
