@@ -12,14 +12,17 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.silhouettepuzzle.config.SecurityConfig;
 import com.silhouettepuzzle.geometry.Outline;
 import com.silhouettepuzzle.geometry.Placement;
 
 @WebMvcTest(LevelController.class)
+@Import(SecurityConfig.class)
 class LevelControllerTest {
 
     private static final Outline UNIT = Outline.of(0, 0, 1, 0, 1, 1, 0, 1);

@@ -17,6 +17,7 @@ import com.silhouettepuzzle.geometry.SolutionChecker;
 import com.silhouettepuzzle.level.Level;
 import com.silhouettepuzzle.level.LevelNotFoundException;
 import com.silhouettepuzzle.level.LevelRepository;
+import com.silhouettepuzzle.player.PlayerPrincipal;
 
 /**
  * Starts attempts and checks submitted solutions. Time is measured on the
@@ -53,13 +54,14 @@ public class AttemptService {
      * Starts a timed attempt at a level.
      *
      * @param levelId the level to play
+     * @param player  the logged-in player, or null when anonymous
      * @return the stored attempt
      */
-    public Attempt start(String levelId) {
+    public Attempt start(String levelId, PlayerPrincipal player) {
         if (!levels.existsById(levelId)) {
             throw new LevelNotFoundException(levelId);
         }
-        return attempts.save(Attempt.start(levelId, clock.instant()));
+        return attempts.save(Attempt.start(levelId, player, clock.instant()));
     }
 
     /**
@@ -67,12 +69,17 @@ public class AttemptService {
      * player can keep going; a solved one accepts no further submissions.
      *
      * @param attemptId  the attempt
+     * @param player     the logged-in player, or null when anonymous
      * @param placements placement of each level piece, in level order
      * @param moves      number of moves the client reports
      * @return the verdict, with the time if the solution was accepted
      */
-    public SubmitResult submit(String attemptId, List<Placement> placements, int moves) {
-        Attempt attempt = attempts.findById(attemptId).orElseThrow(() -> new AttemptNotFoundException(attemptId));
+    public SubmitResult submit(String attemptId, PlayerPrincipal player, List<Placement> placements, int moves) {
+        // Someone else's attempt is reported as missing rather than forbidden,
+        // so attempt ids of other players cannot be probed.
+        Attempt attempt = attempts.findById(attemptId)
+                .filter(found -> found.playableBy(player))
+                .orElseThrow(() -> new AttemptNotFoundException(attemptId));
         if (attempt.solved()) {
             throw new AttemptAlreadySolvedException(attemptId);
         }

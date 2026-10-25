@@ -1,6 +1,7 @@
 package com.silhouettepuzzle.attempt;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -109,7 +110,7 @@ class AttemptFlowTest {
                 Callable<Integer> task = () -> {
                     go.await();
                     try {
-                        return service.submit(attemptId, solution, moves).moves();
+                        return service.submit(attemptId, null, solution, moves).moves();
                     } catch (AttemptAlreadySolvedException e) {
                         return null;
                     }
@@ -132,7 +133,7 @@ class AttemptFlowTest {
 
     @Test
     void startingAnUnknownLevelIsNotFound() throws Exception {
-        mvc.perform(post("/api/levels/nope/attempts")).andExpect(status().isNotFound());
+        mvc.perform(post("/api/levels/nope/attempts").with(csrf())).andExpect(status().isNotFound());
     }
 
     @Test
@@ -153,7 +154,7 @@ class AttemptFlowTest {
     void aRotationOffTheStepIsABadRequest() throws Exception {
         String attemptId = start("square");
 
-        mvc.perform(post("/api/attempts/{id}/submit", attemptId)
+        mvc.perform(post("/api/attempts/{id}/submit", attemptId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"placements\": [{\"x\": 0, \"y\": 0, \"rotation\": 30, \"flipped\": false}],"
                                 + " \"moves\": 1}"))
@@ -168,7 +169,7 @@ class AttemptFlowTest {
     }
 
     private String start(String levelId) throws Exception {
-        String body = mvc.perform(post("/api/levels/{id}/attempts", levelId))
+        String body = mvc.perform(post("/api/levels/{id}/attempts", levelId).with(csrf()))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists("Location"))
                 .andReturn().getResponse().getContentAsString();
@@ -176,7 +177,7 @@ class AttemptFlowTest {
     }
 
     private ResultActions submit(String attemptId, List<Placement> placements, int moves) throws Exception {
-        return mvc.perform(post("/api/attempts/{id}/submit", attemptId)
+        return mvc.perform(post("/api/attempts/{id}/submit", attemptId).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(new SubmitRequest(placements, moves))));
     }

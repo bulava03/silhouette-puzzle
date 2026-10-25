@@ -39,8 +39,26 @@ the server and is never sent to clients.
 | GET    | `/api/levels/{id}`             | Silhouette and pieces of one level     |
 | POST   | `/api/levels/{id}/attempts`    | Start a timed attempt                  |
 | POST   | `/api/attempts/{id}/submit`    | Submit piece placements for checking   |
+| GET    | `/api/levels/{id}/leaderboard` | Best run of each player (`?limit=`)    |
+| POST   | `/api/players`                 | Register                               |
+| POST   | `/login`, `/logout`            | Log in (form) and log out              |
+| GET    | `/api/me`                      | Current player (login required)        |
+| GET    | `/api/me/progress`             | Personal bests per level (login required) |
 
 Errors are returned as RFC 9457 problem details.
+
+### Accounts
+
+Authentication is session-based with Spring Security: players log in with a
+form and stay logged in through the session cookie; passwords are hashed with
+BCrypt. State-changing requests need a CSRF token, which the server puts in
+the `XSRF-TOKEN` cookie and scripts send back in the `X-XSRF-TOKEN` header.
+Usernames are unique regardless of case, enforced by a unique index.
+
+Anyone can play without an account. Only attempts of logged-in players count
+for leaderboards and progress, and a player's attempt can be submitted only
+by that player. The leaderboard is a MongoDB aggregation that keeps each
+player's best run, ranked by time, then moves, then who was first.
 
 ### Solving a level
 
