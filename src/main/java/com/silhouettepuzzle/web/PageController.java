@@ -114,7 +114,7 @@ public class PageController {
                     accent(i), Shapes.viewBox(level.silhouette(), 0.5),
                     level.silhouette().stream().map(Shapes::points).toList(), best != null,
                     best == null ? null : Times.clock(best.bestTimeMs()),
-                    best == null ? null : best.fewestMoves()));
+                    best == null ? null : best.moves()));
         }
         model.addAttribute("levels", cards);
         model.addAttribute("solvedCount", progress.size());

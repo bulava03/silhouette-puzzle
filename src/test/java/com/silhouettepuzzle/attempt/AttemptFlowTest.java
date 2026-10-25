@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -57,6 +58,9 @@ class AttemptFlowTest {
 
     @Autowired
     private IntegrationTestConfig.MutableClock clock;
+
+    @Autowired
+    private MongoTemplate mongo;
 
     @Test
     void solvingALevelRecordsServerTimeAndMoves() throws Exception {
@@ -167,6 +171,32 @@ class AttemptFlowTest {
         String attemptId = start("bus");
 
         submit(attemptId, solutionOf("bus"), -1).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void anAttemptCanBeSubmittedForADay() throws Exception {
+        String attemptId = start("bus");
+        clock.advance(Duration.ofHours(24));
+
+        submit(attemptId, solutionOf("bus"), 9).andExpect(jsonPath("$.solved").value(true));
+    }
+
+    @Test
+    void anAttemptOlderThanADayHasExpired() throws Exception {
+        String attemptId = start("bus");
+        clock.advance(Duration.ofHours(24).plusSeconds(1));
+
+        submit(attemptId, solutionOf("bus"), 9)
+                .andExpect(status().isGone())
+                .andExpect(jsonPath("$.detail").value("Attempt " + attemptId + " has expired; start the level again"));
+    }
+
+    @Test
+    void mongoRemovesAttemptsTwoDaysAfterTheyStart() {
+        assertThat(mongo.indexOps(Attempt.class).getIndexInfo())
+                .filteredOn(index -> index.getName().equals(AttemptIndexes.EXPIRY_INDEX))
+                .singleElement()
+                .satisfies(index -> assertThat(index.getExpireAfter()).contains(Duration.ofHours(48)));
     }
 
     private String start(String levelId) throws Exception {

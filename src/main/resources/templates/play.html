@@ -76,6 +76,13 @@
             <span class="result__title">Not quite</span>
             <span id="missed-text"></span>
         </div>
+        <div class="result result--missed" id="result-expired" role="alert" hidden>
+            <span class="result__title">Time ran out</span>
+            <span>This attempt started more than a day ago, so its time no longer counts. Start the picture again.</span>
+            <div class="result__actions">
+                <button class="button button--pink" type="button" id="start-again">Start again</button>
+            </div>
+        </div>
         <div class="result result--error" id="result-error" role="alert" hidden>
             <span class="result__title">Something went wrong</span>
             <span id="error-text"></span>

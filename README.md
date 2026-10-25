@@ -91,8 +91,7 @@ Usernames are unique regardless of case, enforced by a unique index.
 
 Anyone can play without an account. Only attempts of logged-in players count
 for leaderboards and progress, and a player's attempt can be submitted only
-by that player. The leaderboard is a MongoDB aggregation that keeps each
-player's best run, ranked by time, then moves, then who was first.
+by that player.
 
 ### Solving a level
 
@@ -109,7 +108,42 @@ The server places the pieces, unites them with JTS and accepts the solution
 when the overlap between pieces and the difference from the silhouette both
 stay within 1% of the silhouette area. A rejected submission keeps the
 attempt open. An accepted one is recorded by a conditional update, so of two
-concurrent correct submissions exactly one counts.
+concurrent correct submissions exactly one counts. An attempt can be
+submitted for a day; after that the server answers 410 and the game starts
+the picture again.
+
+## Data model
+
+Three MongoDB collections:
+
+```
+levels    { _id, name, number, silhouette, pieces: [{ name, color, outline, startRotation }], solution }
+players   { _id, username, usernameKey, passwordHash, createdAt,
+            bests: [{ levelId, timeMs, moves, solvedAt, solves }] }
+attempts  { _id, levelId, playerId, startedAt, solvedAt, timeMs, moves }
+```
+
+Players and levels are many-to-many, and the link carries data: a player's
+best time and moves on a level. It is embedded in the player as `bests`, one
+entry per solved level, rather than kept as a log of every run:
+
+- a player's progress is read together with the player;
+- the array is bounded by the number of levels, so documents stay small;
+- the leaderboard of a level is an aggregation over the players that have
+  it (`$match` on an index of `bests.levelId`, `$unwind`, `$sort`), ranked
+  by time, then moves, then who was first.
+
+A separate results collection would pay off with millions of players per
+level; at this scale embedding keeps the model and the queries simpler.
+Bests are updated with conditional updates only: a solve is counted on the
+level's entry, a missing entry is pushed only if it is still missing, and a
+run replaces the best only if it is faster, or as fast with fewer moves. A
+test fires concurrent solves at one player to check that.
+
+Attempts exist because the server, not the client, keeps the time: an
+attempt holds its start until it is solved or abandoned. They are temporary,
+and a TTL index removes them two days after they start. If a level were ever
+retired, one `$pull` would remove it from every player's bests.
 
 ## Getting started
 

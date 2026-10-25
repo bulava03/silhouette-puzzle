@@ -2,6 +2,7 @@ package com.silhouettepuzzle.player;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
+import java.util.List;
 
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
@@ -51,7 +52,8 @@ public class PlayerService {
         if (players.existsByUsernameKey(key)) {
             throw new UsernameTakenException(request.username());
         }
-        Player player = new Player(null, request.username(), key, encoder.encode(request.password()), clock.instant());
+        Player player = new Player(null, request.username(), key, encoder.encode(request.password()), clock.instant(),
+                List.of());
         try {
             return players.save(player);
         } catch (DuplicateKeyException e) {

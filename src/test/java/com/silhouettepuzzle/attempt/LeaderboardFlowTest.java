@@ -115,8 +115,21 @@ class LeaderboardFlowTest {
                 .andExpect(jsonPath("$[0].levelId").value("bus"))
                 .andExpect(jsonPath("$[0].solves").value(2))
                 .andExpect(jsonPath("$[0].bestTimeMs").value(25_000))
-                .andExpect(jsonPath("$[0].fewestMoves").value(20))
+                .andExpect(jsonPath("$[0].moves").value(30))
                 .andExpect(jsonPath("$[1].levelId").value("house"));
+    }
+
+    @Test
+    void anEquallyFastRunWithFewerMovesBecomesTheBest() throws Exception {
+        MockHttpSession alice = player("alice");
+        solve(alice, "bus", 25, 30);
+        solve(alice, "bus", 25, 12);
+        solve(alice, "bus", 40, 3);
+
+        mvc.perform(get("/api/me/progress").session(alice))
+                .andExpect(jsonPath("$[0].solves").value(3))
+                .andExpect(jsonPath("$[0].bestTimeMs").value(25_000))
+                .andExpect(jsonPath("$[0].moves").value(12));
     }
 
     @Test

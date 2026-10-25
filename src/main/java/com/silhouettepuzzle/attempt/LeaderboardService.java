@@ -1,16 +1,17 @@
 package com.silhouettepuzzle.attempt;
 
-import static org.springframework.data.mongodb.core.aggregation.Aggregation.group;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.limit;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.match;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.newAggregation;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.project;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.sort;
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.unwind;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
-import org.springframework.data.annotation.Id;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
@@ -19,29 +20,33 @@ import org.springframework.stereotype.Service;
 
 import com.silhouettepuzzle.level.LevelNotFoundException;
 import com.silhouettepuzzle.level.LevelRepository;
+import com.silhouettepuzzle.player.Player;
+import com.silhouettepuzzle.player.PlayerRepository;
 
 /**
- * Results built from solved attempts with MongoDB aggregations. Only
- * attempts of registered players count.
+ * Results built from the players' bests.
  */
 @Service
 public class LeaderboardService {
 
     /** Ranking order: faster first, then fewer moves, then whoever was first. */
-    private static final Sort RANKING = Sort.by("timeMs", "moves", "solvedAt");
+    private static final Sort RANKING = Sort.by("bests.timeMs", "bests.moves", "bests.solvedAt");
 
     private final MongoTemplate mongo;
     private final LevelRepository levels;
+    private final PlayerRepository players;
 
     /**
      * Creates the service.
      *
-     * @param mongo  template for aggregations
-     * @param levels level storage, to tell an empty leaderboard from a missing level
+     * @param mongo   template for aggregations
+     * @param levels  level storage, to tell an empty leaderboard from a missing level
+     * @param players player storage, for a player's own progress
      */
-    public LeaderboardService(MongoTemplate mongo, LevelRepository levels) {
+    public LeaderboardService(MongoTemplate mongo, LevelRepository levels, PlayerRepository players) {
         this.mongo = mongo;
         this.levels = levels;
+        this.players = players;
     }
 
     /**
@@ -55,15 +60,18 @@ public class LeaderboardService {
         if (!levels.existsById(levelId)) {
             throw new LevelNotFoundException(levelId);
         }
+        Criteria onLevel = Criteria.where("bests.levelId").is(levelId);
         Aggregation aggregation = newAggregation(
-                match(Criteria.where("levelId").is(levelId).and("playerId").ne(null).and("solvedAt").ne(null)),
+                // The first match uses the index to pick the players who have the level,
+                // the second keeps only that level's entry of each after unwinding.
+                match(onLevel),
+                unwind("bests"),
+                match(onLevel),
                 sort(RANKING),
-                // After the sort, the first run of each player is that player's best.
-                group("playerId").first("username").as("username").first("timeMs").as("timeMs")
-                        .first("moves").as("moves").first("solvedAt").as("solvedAt"),
-                sort(RANKING),
-                limit(size));
-        List<BestRun> runs = mongo.aggregate(aggregation, Attempt.class, BestRun.class).getMappedResults();
+                limit(size),
+                project("username").and("bests.timeMs").as("timeMs").and("bests.moves").as("moves")
+                        .and("bests.solvedAt").as("solvedAt"));
+        List<BestRun> runs = mongo.aggregate(aggregation, Player.class, BestRun.class).getMappedResults();
 
         List<LeaderboardEntry> entries = new ArrayList<>(runs.size());
         for (int i = 0; i < runs.size(); i++) {
@@ -74,42 +82,26 @@ public class LeaderboardService {
     }
 
     /**
-     * Returns a player's personal bests on every level they solved.
+     * Returns a player's best run on every level they solved.
      *
      * @param playerId the player
      * @return one entry per solved level, ordered by level id
      */
     public List<ProgressEntry> progressOf(String playerId) {
-        Aggregation aggregation = newAggregation(
-                match(Criteria.where("playerId").is(playerId).and("solvedAt").ne(null)),
-                group("levelId").count().as("solves").min("timeMs").as("bestTimeMs")
-                        .min("moves").as("fewestMoves"),
-                sort(Sort.by("_id")));
-        return mongo.aggregate(aggregation, Attempt.class, LevelBest.class).getMappedResults().stream()
-                .map(best -> new ProgressEntry(best.levelId(), best.solves(), best.bestTimeMs(), best.fewestMoves()))
+        return players.findById(playerId).map(Player::bestsOrEmpty).orElse(List.of()).stream()
+                .map(best -> new ProgressEntry(best.levelId(), best.solves(), best.timeMs(), best.moves()))
+                .sorted(Comparator.comparing(ProgressEntry::levelId))
                 .toList();
     }
 
     /**
-     * A player's best run, as the leaderboard aggregation returns it.
+     * A player's best run on the level, as the aggregation returns it.
      *
-     * @param playerId the player
      * @param username the player's name
      * @param timeMs   time of the run
      * @param moves    moves of the run
      * @param solvedAt when the run was solved
      */
-    record BestRun(@Id String playerId, String username, long timeMs, int moves, Instant solvedAt) {
-    }
-
-    /**
-     * A player's bests on one level, as the progress aggregation returns them.
-     *
-     * @param levelId     the level
-     * @param solves      number of solved attempts
-     * @param bestTimeMs  fastest time
-     * @param fewestMoves fewest moves
-     */
-    record LevelBest(@Id String levelId, int solves, long bestTimeMs, int fewestMoves) {
+    record BestRun(String username, long timeMs, int moves, Instant solvedAt) {
     }
 }

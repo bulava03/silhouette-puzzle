@@ -32,6 +32,8 @@
         solvedNote: document.getElementById('solved-note'),
         missed: document.getElementById('result-missed'),
         missedText: document.getElementById('missed-text'),
+        expired: document.getElementById('result-expired'),
+        startAgain: document.getElementById('start-again'),
         error: document.getElementById('result-error'),
         errorText: document.getElementById('error-text')
     };
@@ -88,7 +90,9 @@
         });
         if (!response.ok) {
             const problem = await response.json().catch(() => ({}));
-            throw new Error(problem.detail || 'The server answered ' + response.status);
+            const error = new Error(problem.detail || 'The server answered ' + response.status);
+            error.status = response.status;
+            throw error;
         }
         return response.json();
     }
@@ -157,6 +161,7 @@
     function hideResults() {
         ui.solved.hidden = true;
         ui.missed.hidden = true;
+        ui.expired.hidden = true;
         ui.error.hidden = true;
     }
 
@@ -341,7 +346,15 @@
                 ui.missed.hidden = false;
             }
         } catch (error) {
-            showError(error.message);
+            if (error.status === 410 || error.status === 404) {
+                // The attempt outlived its day (410) or is already gone (404).
+                hideResults();
+                clearInterval(game.timer);
+                game.attemptId = null;
+                ui.expired.hidden = false;
+            } else {
+                showError(error.message);
+            }
         } finally {
             game.busy = false;
             render();
@@ -375,6 +388,7 @@
         ui.flipVertical.addEventListener('click', () => turn((p) => ({ r: (540 - p.r) % 360, f: !p.f })));
         ui.check.addEventListener('click', check);
         ui.restart.addEventListener('click', start);
+        ui.startAgain.addEventListener('click', start);
         await start();
     }
 

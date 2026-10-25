@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -17,6 +18,7 @@ import com.silhouettepuzzle.geometry.SolutionChecker;
 import com.silhouettepuzzle.level.Level;
 import com.silhouettepuzzle.level.LevelNotFoundException;
 import com.silhouettepuzzle.level.LevelRepository;
+import com.silhouettepuzzle.player.PlayerBests;
 import com.silhouettepuzzle.player.PlayerPrincipal;
 
 /**
@@ -30,7 +32,9 @@ public class AttemptService {
     private final LevelRepository levels;
     private final MongoTemplate mongo;
     private final SolutionChecker checker;
+    private final PlayerBests bests;
     private final Clock clock;
+    private final Duration lifetime;
 
     /**
      * Creates the service.
@@ -39,15 +43,20 @@ public class AttemptService {
      * @param levels   level storage
      * @param mongo    template for the conditional "mark solved" update
      * @param checker  solution checker
+     * @param bests    where players' solved runs are recorded
      * @param clock    source of the current time
+     * @param lifetime how long after its start an attempt can be submitted
      */
     public AttemptService(AttemptRepository attempts, LevelRepository levels, MongoTemplate mongo,
-                          SolutionChecker checker, Clock clock) {
+                          SolutionChecker checker, PlayerBests bests, Clock clock,
+                          @Value("${app.attempts.lifetime}") Duration lifetime) {
         this.attempts = attempts;
         this.levels = levels;
         this.mongo = mongo;
         this.checker = checker;
+        this.bests = bests;
         this.clock = clock;
+        this.lifetime = lifetime;
     }
 
     /**
@@ -66,7 +75,8 @@ public class AttemptService {
 
     /**
      * Checks a submitted solution. An unsolved attempt stays open, so the
-     * player can keep going; a solved one accepts no further submissions.
+     * player can keep going, until its lifetime runs out; a solved one
+     * accepts no further submissions. A player's solved run goes to their bests.
      *
      * @param attemptId  the attempt
      * @param player     the logged-in player, or null when anonymous
@@ -83,6 +93,10 @@ public class AttemptService {
         if (attempt.solved()) {
             throw new AttemptAlreadySolvedException(attemptId);
         }
+        Instant now = clock.instant();
+        if (Duration.between(attempt.startedAt(), now).compareTo(lifetime) > 0) {
+            throw new AttemptExpiredException(attemptId);
+        }
         Level level = levels.findById(attempt.levelId())
                 .orElseThrow(() -> new LevelNotFoundException(attempt.levelId()));
         if (placements.size() != level.pieces().size()) {
@@ -95,9 +109,11 @@ public class AttemptService {
         if (!result.solved()) {
             return SubmitResult.unsolved(result);
         }
-        Instant now = clock.instant();
         long timeMs = Duration.between(attempt.startedAt(), now).toMillis();
         markSolved(attemptId, now, timeMs, moves);
+        if (attempt.playerId() != null) {
+            bests.record(attempt.playerId(), level.id(), timeMs, moves, now);
+        }
         return SubmitResult.solved(result, timeMs, moves);
     }
 
