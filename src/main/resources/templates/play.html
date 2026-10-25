@@ -8,14 +8,15 @@
 <main class="game" id="game"
       th:data-csrf="${_csrf.token != null}"
       th:data-level="${level.id}"
-      th:data-accent="${accent}"
-      th:data-next="@{/play/{id}(id=${nextId})}"
+      th:data-accent="${svg.accent(index)}"
+      th:data-next="@{/play/{id}(id=${next.id})}"
       th:data-me="${me != null} ? ${me.username} : ''">
     <section class="game__board" aria-label="Board">
         <nav class="tabs" aria-label="Levels">
-            <a class="tab" th:each="tab : ${tabs}" th:href="@{/play/{id}(id=${tab.id})}" th:text="${tab.label}"
-               th:style="'--accent: ' + ${tab.accent}"
-               th:attr="aria-current=${tab.current} ? 'page' : null">01 Bus</a>
+            <a class="tab" th:each="tab, iter : ${levels}" th:href="@{/play/{id}(id=${tab.id})}"
+               th:text="${#numbers.formatInteger(tab.number, 2)} + ' ' + ${tab.name}"
+               th:style="'--accent: ' + ${svg.accent(iter.index)}"
+               th:attr="aria-current=${tab.id == level.id} ? 'page' : null">01 Bus</a>
         </nav>
         <div class="board card" id="board">
             <svg id="board-svg" role="img" th:attr="aria-label=${level.name} + ' silhouette and its parts'"></svg>
@@ -68,7 +69,7 @@
             <span>Built in <strong class="mono" id="solved-time">00:00</strong> with <strong class="mono" id="solved-moves">0</strong> moves.</span>
             <span class="result__note" id="solved-note"></span>
             <div class="result__actions">
-                <a class="button button--green" th:href="@{/play/{id}(id=${nextId})}">Next picture</a>
+                <a class="button button--green" th:href="@{/play/{id}(id=${next.id})}">Next picture</a>
                 <a th:href="@{/leaderboard(level=${level.id})}">Leaderboard →</a>
             </div>
         </div>

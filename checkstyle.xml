@@ -2,16 +2,15 @@
         "https://checkstyle.org/dtds/configuration_1_3.dtd">
 <module name="Checker">
     <module name="TreeWalker">
-        <module name="JavadocType"/>
-        <module name="JavadocMethod"/>
-        <module name="JavadocVariable">
-            <property name="scope" value="protected"/>
+        <!-- Every type says what it is for; methods get comments where they are not obvious. -->
+        <module name="JavadocType">
+            <property name="allowMissingParamTags" value="true"/>
         </module>
         <module name="Indentation"/>
         <module name="WhitespaceAfter"/>
         <module name="CyclomaticComplexity">
-            <property name="max" value="10"/>  <!-- Maximum allowed complexity -->
-            <property name="switchBlockAsSingleDecisionPoint" value="true"/>  <!-- Count switch as a single decision point -->
+            <property name="max" value="10"/>
+            <property name="switchBlockAsSingleDecisionPoint" value="true"/>
         </module>
     </module>
 </module>

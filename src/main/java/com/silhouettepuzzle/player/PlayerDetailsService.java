@@ -6,18 +6,13 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 /**
- * Loads players for login; the username is matched ignoring case.
+ * Loads players for login, matching the username regardless of case.
  */
 @Service
 public class PlayerDetailsService implements UserDetailsService {
 
     private final PlayerRepository players;
 
-    /**
-     * Creates the service.
-     *
-     * @param players player storage
-     */
     public PlayerDetailsService(PlayerRepository players) {
         this.players = players;
     }

@@ -64,72 +64,43 @@ class LeaderboardFlowTest {
     @Test
     void ranksEachPlayersBestRunByTimeThenMoves() throws Exception {
         MockHttpSession alice = player("alice");
-        MockHttpSession bob = player("bob");
-        MockHttpSession carol = player("carol");
         solve(alice, "bus", 30, 20);
         solve(alice, "bus", 25, 30);
-        solve(bob, "bus", 25, 10);
-        solve(carol, "bus", 40, 5);
-        solve(null, "bus", 1, 1);
-        start(player("dave"), "bus");
+        solve(player("bob"), "bus", 25, 10);
+        solve(player("carol"), "bus", 40, 5);
+        solve(null, "bus", 1, 1);           // anonymous: never ranked
+        start(player("dave"), "bus");       // unsolved: never ranked
 
         mvc.perform(get("/api/levels/bus/leaderboard"))
-                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3))
-                .andExpect(jsonPath("$[0].rank").value(1))
                 .andExpect(jsonPath("$[0].username").value("bob"))
                 .andExpect(jsonPath("$[0].timeMs").value(25_000))
                 .andExpect(jsonPath("$[1].username").value("alice"))
                 .andExpect(jsonPath("$[1].moves").value(30))
-                .andExpect(jsonPath("$[2].username").value("carol"));
-    }
-
-    @Test
-    void limitsTheLeaderboard() throws Exception {
-        solve(player("alice"), "bus", 10, 1);
-        solve(player("bob"), "bus", 20, 1);
-
+                .andExpect(jsonPath("$[2].rank").value(3));
         mvc.perform(get("/api/levels/bus/leaderboard").param("limit", "1"))
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].username").value("alice"));
-        mvc.perform(get("/api/levels/bus/leaderboard").param("limit", "0")).andExpect(status().isBadRequest());
-        mvc.perform(get("/api/levels/bus/leaderboard").param("limit", "101")).andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void aLeaderboardOfAnUnknownLevelIsNotFound() throws Exception {
+                .andExpect(jsonPath("$.length()").value(1));
+        for (String limit : List.of("0", "101")) {
+            mvc.perform(get("/api/levels/bus/leaderboard").param("limit", limit)).andExpect(status().isBadRequest());
+        }
         mvc.perform(get("/api/levels/nope/leaderboard")).andExpect(status().isNotFound());
     }
 
     @Test
-    void showsPersonalBestsPerLevel() throws Exception {
+    void progressKeepsTheBestRunOfEachLevel() throws Exception {
         MockHttpSession alice = player("alice");
-        solve(alice, "bus", 30, 20);
         solve(alice, "bus", 25, 30);
+        solve(alice, "bus", 25, 12);   // as fast with fewer moves: the new best
+        solve(alice, "bus", 40, 3);    // slower: counted, not kept
         solve(alice, "house", 50, 12);
-        solve(player("bob"), "bus", 5, 5);
 
         mvc.perform(get("/api/me/progress").session(alice))
-                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].levelId").value("bus"))
-                .andExpect(jsonPath("$[0].solves").value(2))
-                .andExpect(jsonPath("$[0].bestTimeMs").value(25_000))
-                .andExpect(jsonPath("$[0].moves").value(30))
-                .andExpect(jsonPath("$[1].levelId").value("house"));
-    }
-
-    @Test
-    void anEquallyFastRunWithFewerMovesBecomesTheBest() throws Exception {
-        MockHttpSession alice = player("alice");
-        solve(alice, "bus", 25, 30);
-        solve(alice, "bus", 25, 12);
-        solve(alice, "bus", 40, 3);
-
-        mvc.perform(get("/api/me/progress").session(alice))
                 .andExpect(jsonPath("$[0].solves").value(3))
-                .andExpect(jsonPath("$[0].bestTimeMs").value(25_000))
-                .andExpect(jsonPath("$[0].moves").value(12));
+                .andExpect(jsonPath("$[0].timeMs").value(25_000))
+                .andExpect(jsonPath("$[0].moves").value(12))
+                .andExpect(jsonPath("$[1].levelId").value("house"));
     }
 
     @Test

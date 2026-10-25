@@ -33,38 +33,29 @@ class PlayerBestsTest {
     @Autowired
     private PlayerRepository players;
 
-    private String playerId;
-
     @BeforeEach
-    void freshPlayer() {
+    void clearPlayers() {
         players.deleteAll();
-        playerId = players.save(new Player(null, "alice", "alice", "{noop}x", AT, List.of())).id();
     }
 
     @Test
-    void keepsOneEntryPerLevelWithTheBestRunAndTheCount() {
-        bests.record(playerId, "bus", 30_000, 20, AT);
-        bests.record(playerId, "bus", 25_000, 30, AT.plusSeconds(60));
-        bests.record(playerId, "bus", 50_000, 5, AT.plusSeconds(120));
-        bests.record(playerId, "house", 40_000, 9, AT);
+    void keepsOneBestRunPerLevelWithTheCount() {
+        // A player stored before there were bests has none at all, not an empty list.
+        String id = players.save(new Player(null, "alice", "alice", "{noop}x", AT, null)).id();
 
-        assertThat(stored()).containsExactlyInAnyOrder(
+        bests.record(id, "bus", 30_000, 20, AT);
+        bests.record(id, "bus", 25_000, 30, AT.plusSeconds(60));
+        bests.record(id, "bus", 50_000, 5, AT.plusSeconds(120));
+        bests.record(id, "house", 40_000, 9, AT);
+
+        assertThat(players.findById(id).orElseThrow().bestsOrEmpty()).containsExactlyInAnyOrder(
                 new PlayerBest("bus", 25_000, 30, AT.plusSeconds(60), 3),
                 new PlayerBest("house", 40_000, 9, AT, 1));
     }
 
     @Test
-    void worksForPlayersStoredBeforeThereWereBests() {
-        String legacy = players.save(new Player(null, "bob", "bob", "{noop}x", AT, null)).id();
-
-        bests.record(legacy, "bus", 30_000, 20, AT);
-
-        assertThat(players.findById(legacy).orElseThrow().bestsOrEmpty())
-                .containsExactly(new PlayerBest("bus", 30_000, 20, AT, 1));
-    }
-
-    @Test
     void concurrentFirstSolvesOfALevelAddItOnceAndCountEverySolve() throws Exception {
+        String id = players.save(new Player(null, "alice", "alice", "{noop}x", AT, List.of())).id();
         int threads = 8;
         CountDownLatch go = new CountDownLatch(1);
         ExecutorService pool = Executors.newFixedThreadPool(threads);
@@ -74,7 +65,7 @@ class PlayerBestsTest {
                 long timeMs = 10_000 + i * 1_000L;
                 runs.add(pool.submit(() -> {
                     go.await();
-                    bests.record(playerId, "bus", timeMs, 7, AT);
+                    bests.record(id, "bus", timeMs, 7, AT);
                     return null;
                 }));
             }
@@ -86,13 +77,9 @@ class PlayerBestsTest {
             pool.shutdown();
         }
 
-        assertThat(stored()).singleElement().satisfies(best -> {
+        assertThat(players.findById(id).orElseThrow().bestsOrEmpty()).singleElement().satisfies(best -> {
             assertThat(best.solves()).isEqualTo(threads);
             assertThat(best.timeMs()).isEqualTo(10_000);
         });
-    }
-
-    private List<PlayerBest> stored() {
-        return players.findById(playerId).orElseThrow().bestsOrEmpty();
     }
 }

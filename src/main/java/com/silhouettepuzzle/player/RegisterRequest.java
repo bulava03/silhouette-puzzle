@@ -5,10 +5,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * Registration form.
- *
- * @param username 3 to 20 Latin letters, digits or underscores
- * @param password at least 8 characters; at most 72 bytes in UTF-8, the BCrypt limit
+ * Registration form: a username of 3 to 20 Latin letters, digits or
+ * underscores, and a password of at least 8 characters.
  */
 public record RegisterRequest(
         @NotNull @Pattern(regexp = "[A-Za-z0-9_]{3,20}",

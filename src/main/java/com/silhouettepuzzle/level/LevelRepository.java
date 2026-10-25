@@ -9,10 +9,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
  */
 public interface LevelRepository extends MongoRepository<Level, String> {
 
-    /**
-     * Lists all levels in play order, reading only the summary fields.
-     *
-     * @return level summaries ordered by number
-     */
-    List<LevelSummary> findAllByOrderByNumberAsc();
+    List<Level> findAllByOrderByNumberAsc();
 }

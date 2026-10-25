@@ -1,10 +1,6 @@
 package com.silhouettepuzzle.web;
 
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -13,7 +9,6 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,13 +23,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.silhouettepuzzle.attempt.LeaderboardEntry;
 import com.silhouettepuzzle.attempt.LeaderboardService;
-import com.silhouettepuzzle.attempt.ProgressEntry;
 import com.silhouettepuzzle.level.Level;
 import com.silhouettepuzzle.level.LevelRepository;
-import com.silhouettepuzzle.level.LevelSummary;
+import com.silhouettepuzzle.player.Player;
+import com.silhouettepuzzle.player.PlayerBest;
 import com.silhouettepuzzle.player.PlayerPrincipal;
+import com.silhouettepuzzle.player.PlayerRepository;
 import com.silhouettepuzzle.player.PlayerService;
 import com.silhouettepuzzle.player.RegisterRequest;
 
@@ -49,228 +44,102 @@ import jakarta.validation.Valid;
 @Controller
 public class PageController {
 
-    /** Edge colours of the levels, in order; they repeat after the last. */
-    private static final List<String> ACCENTS = List.of("#6BD8DE", "#EE8DBD", "#E4AC59");
-
-    /** How many places the leaderboard page shows. */
-    private static final int LEADERBOARD_SIZE = 50;
-
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)
-            .withZone(ZoneOffset.UTC);
-
     private final LevelRepository levels;
+    private final PlayerRepository players;
     private final LeaderboardService leaderboards;
-    private final PlayerService players;
+    private final PlayerService registration;
     private final AuthenticationManager authentication;
     private final SecurityContextRepository contexts;
+    private final Svg svg;
 
-    /**
-     * Creates the controller.
-     *
-     * @param levels         level storage
-     * @param leaderboards   results queries
-     * @param players        registration
-     * @param authentication checks a new player's credentials to log them in
-     * @param contexts       keeps the logged-in player in the session
-     */
-    public PageController(LevelRepository levels, LeaderboardService leaderboards, PlayerService players,
-                          AuthenticationManager authentication, SecurityContextRepository contexts) {
+    public PageController(LevelRepository levels, PlayerRepository players, LeaderboardService leaderboards,
+                          PlayerService registration, AuthenticationManager authentication,
+                          SecurityContextRepository contexts, Svg svg) {
         this.levels = levels;
-        this.leaderboards = leaderboards;
         this.players = players;
+        this.leaderboards = leaderboards;
+        this.registration = registration;
         this.authentication = authentication;
         this.contexts = contexts;
+        this.svg = svg;
     }
 
-    /**
-     * Makes the logged-in player, if any, available to every page.
-     *
-     * @param me the logged-in player, or null
-     * @return the player for the {@code me} model attribute
-     */
-    @ModelAttribute("me")
-    public PlayerPrincipal me(@AuthenticationPrincipal PlayerPrincipal me) {
-        return me;
+    @ModelAttribute
+    public void common(@AuthenticationPrincipal PlayerPrincipal me, Model model) {
+        model.addAttribute("me", me);
+        model.addAttribute("svg", svg);
+        model.addAttribute("levels", levels.findAllByOrderByNumberAsc());
     }
 
-    /**
-     * The levels page: every picture with the player's bests.
-     *
-     * @param me    the logged-in player, or null
-     * @param model view model
-     * @return the template
-     */
     @GetMapping("/")
     public String levels(@AuthenticationPrincipal PlayerPrincipal me, Model model) {
-        Map<String, ProgressEntry> progress = me == null ? Map.of()
-                : leaderboards.progressOf(me.getId()).stream()
-                .collect(Collectors.toMap(ProgressEntry::levelId, Function.identity()));
-        List<Level> all = levels.findAll().stream().sorted((a, b) -> Integer.compare(a.number(), b.number())).toList();
-        List<LevelCard> cards = new ArrayList<>(all.size());
-        for (int i = 0; i < all.size(); i++) {
-            Level level = all.get(i);
-            ProgressEntry best = progress.get(level.id());
-            cards.add(new LevelCard(level.id(), "%02d".formatted(level.number()), level.name(), level.pieces().size(),
-                    accent(i), Shapes.viewBox(level.silhouette(), 0.5),
-                    level.silhouette().stream().map(Shapes::points).toList(), best != null,
-                    best == null ? null : Times.clock(best.bestTimeMs()),
-                    best == null ? null : best.moves()));
-        }
-        model.addAttribute("levels", cards);
-        model.addAttribute("solvedCount", progress.size());
+        Map<String, PlayerBest> bests = me == null ? Map.of()
+                : players.findById(me.getId()).map(Player::bestsOrEmpty).orElse(List.of()).stream()
+                .collect(Collectors.toMap(PlayerBest::levelId, Function.identity()));
+        model.addAttribute("bests", bests);
         return "levels";
     }
 
-    /**
-     * The game page for one level. The page script loads the level and
-     * talks to the attempt API.
-     *
-     * @param id       the level
-     * @param model    view model
-     * @param response to answer 404 for an unknown level
-     * @return the template
-     */
     @GetMapping("/play/{id}")
     public String play(@PathVariable String id, Model model, HttpServletResponse response) {
-        List<LevelSummary> order = levels.findAllByOrderByNumberAsc();
-        int index = indexOf(order, id);
-        if (index < 0) {
-            response.setStatus(HttpStatus.NOT_FOUND.value());
-            return "not-found";
-        }
-        LevelSummary level = order.get(index);
-        model.addAttribute("level", level);
-        model.addAttribute("accent", accent(index));
-        model.addAttribute("nextId", order.get((index + 1) % order.size()).id());
-        model.addAttribute("tabs", tabs(order, id));
-        return "play";
+        return select(id, model, response).isPresent() ? "play" : "not-found";
     }
 
-    /**
-     * The leaderboard of one level, the first one by default.
-     *
-     * @param levelId the level, or null for the first
-     * @param me      the logged-in player, or null
-     * @param model   view model
-     * @param response to answer 404 for an unknown level
-     * @return the template
-     */
     @GetMapping("/leaderboard")
-    public String leaderboard(@RequestParam(name = "level", required = false) String levelId,
-                              @AuthenticationPrincipal PlayerPrincipal me, Model model,
+    public String leaderboard(@RequestParam(name = "level", required = false) String id, Model model,
                               HttpServletResponse response) {
-        List<LevelSummary> order = levels.findAllByOrderByNumberAsc();
-        String id = levelId != null ? levelId : order.isEmpty() ? null : order.getFirst().id();
-        int index = id == null ? -1 : indexOf(order, id);
-        if (index < 0) {
-            response.setStatus(HttpStatus.NOT_FOUND.value());
-            return "not-found";
-        }
-        String myName = me == null ? null : me.getUsername();
-        List<ResultRow> rows = leaderboards.leaderboard(id, LEADERBOARD_SIZE).stream()
-                .map(entry -> row(entry, myName)).toList();
-        model.addAttribute("level", order.get(index));
-        model.addAttribute("tabs", tabs(order, id));
-        model.addAttribute("rows", rows);
-        model.addAttribute("podium", rows.subList(0, Math.min(3, rows.size())));
-        return "leaderboard";
+        Optional<Level> level = select(id, model, response);
+        level.ifPresent(found -> model.addAttribute("rows", leaderboards.leaderboard(found.id(), 50)));
+        return level.isPresent() ? "leaderboard" : "not-found";
     }
 
-    /**
-     * The login and registration page.
-     *
-     * @param mode  {@code register} to open the registration form
-     * @param model view model
-     * @return the template
-     */
     @GetMapping("/login")
     public String login(@RequestParam(defaultValue = "login") String mode, Model model) {
         model.addAttribute("register", "register".equals(mode));
-        if (!model.containsAttribute("form")) {
-            model.addAttribute("form", new RegisterRequest("", ""));
-        }
-        return loginPage(model);
+        model.addAttribute("form", new RegisterRequest("", ""));
+        return "login";
     }
 
-    /**
-     * Registers a player from the form and logs them in.
-     *
-     * @param form     username and password
-     * @param errors   validation errors of the form
-     * @param model    view model
-     * @param request  the request, to store the new login in the session
-     * @param response the response, to store the new login in the session
-     * @return a redirect to the levels, or the form again with errors
-     */
+    /** Registers a player from the form and logs them in, or shows the form again with errors. */
     @PostMapping("/register")
     public String register(@Valid @ModelAttribute("form") RegisterRequest form, BindingResult errors, Model model,
                            HttpServletRequest request, HttpServletResponse response) {
         model.addAttribute("register", true);
         if (errors.hasErrors()) {
-            return loginPage(model);
+            return "login";
         }
         try {
-            players.register(form);
+            registration.register(form);
         } catch (ErrorResponseException e) {
             model.addAttribute("formError", Optional.ofNullable(e.getBody().getDetail()).orElse("Registration failed"));
-            return loginPage(model);
+            return "login";
         }
-        logIn(form, request, response);
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication.authenticate(
+                UsernamePasswordAuthenticationToken.unauthenticated(form.username(), form.password())));
+        if (request.getSession(false) != null) {
+            request.changeSessionId(); // a fresh session id on login, against session fixation
+        }
+        SecurityContextHolder.setContext(context);
+        contexts.saveContext(context, request, response);
         return "redirect:/";
     }
 
     /**
-     * Fills the login page's decoration, the first picture already built.
-     *
-     * @param model view model
-     * @return the template
+     * Puts the level (the first one when no id is given), its position and
+     * the next level into the model, or answers 404.
      */
-    private String loginPage(Model model) {
-        model.addAttribute("art", levels.findAll().stream()
-                .min((a, b) -> Integer.compare(a.number(), b.number()))
-                .map(Artwork::of)
-                .orElse(null));
-        return "login";
-    }
-
-    private void logIn(RegisterRequest form, HttpServletRequest request, HttpServletResponse response) {
-        Authentication result = authentication.authenticate(
-                UsernamePasswordAuthenticationToken.unauthenticated(form.username(), form.password()));
-        // A fresh session id on login, as the login form gets, against session fixation.
-        if (request.getSession(false) != null) {
-            request.changeSessionId();
-        }
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(result);
-        SecurityContextHolder.setContext(context);
-        contexts.saveContext(context, request, response);
-    }
-
-    private static ResultRow row(LeaderboardEntry entry, String myName) {
-        return new ResultRow(entry.rank(), entry.username(), Times.clock(entry.timeMs()), entry.moves(),
-                DAY.format(entry.solvedAt()), entry.username().equals(myName));
-    }
-
-    private static List<LevelTab> tabs(List<LevelSummary> order, String currentId) {
-        List<LevelTab> tabs = new ArrayList<>(order.size());
-        for (int i = 0; i < order.size(); i++) {
-            LevelSummary level = order.get(i);
-            tabs.add(new LevelTab(level.id(), "%02d %s".formatted(level.number(), level.name()), accent(i),
-                    level.id().equals(currentId)));
-        }
-        return tabs;
-    }
-
-    private static int indexOf(List<LevelSummary> order, String id) {
-        for (int i = 0; i < order.size(); i++) {
-            if (order.get(i).id().equals(id)) {
-                return i;
+    private Optional<Level> select(String id, Model model, HttpServletResponse response) {
+        List<Level> all = levels.findAllByOrderByNumberAsc();
+        for (int i = 0; i < all.size(); i++) {
+            if (id == null || all.get(i).id().equals(id)) {
+                model.addAttribute("level", all.get(i));
+                model.addAttribute("index", i);
+                model.addAttribute("next", all.get((i + 1) % all.size()));
+                return Optional.of(all.get(i));
             }
         }
-        return -1;
-    }
-
-    private static String accent(int index) {
-        return ACCENTS.get(index % ACCENTS.size());
+        response.setStatus(HttpStatus.NOT_FOUND.value());
+        return Optional.empty();
     }
 }

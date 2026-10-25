@@ -13,18 +13,11 @@ import org.locationtech.jts.geom.util.AffineTransformation;
  */
 final class Geometries {
 
-    /** Shared factory; JTS geometry factories are immutable and thread-safe. */
-    static final GeometryFactory FACTORY = new GeometryFactory();
+    private static final GeometryFactory FACTORY = new GeometryFactory();
 
     private Geometries() {
     }
 
-    /**
-     * Builds a JTS polygon from vertices given in order.
-     *
-     * @param vertices polygon vertices without the closing one
-     * @return the polygon
-     */
     static Polygon toPolygon(List<Point> vertices) {
         Coordinate[] ring = new Coordinate[vertices.size() + 1];
         for (int i = 0; i < vertices.size(); i++) {
@@ -34,13 +27,7 @@ final class Geometries {
         return FACTORY.createPolygon(ring);
     }
 
-    /**
-     * Moves a piece outline to where the placement puts it on the board.
-     *
-     * @param piece     piece outline in its own coordinates
-     * @param placement where the piece was put
-     * @return the piece polygon in board coordinates
-     */
+    /** Moves a piece from its own coordinates to where the placement puts it. */
     static Geometry place(Outline piece, Placement placement) {
         AffineTransformation transform = new AffineTransformation();
         if (placement.flipped()) {

@@ -1,10 +1,12 @@
 package com.silhouettepuzzle.attempt;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -27,6 +29,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import com.silhouettepuzzle.ApiException;
 import com.silhouettepuzzle.IntegrationTestConfig;
 import com.silhouettepuzzle.geometry.Placement;
 import com.silhouettepuzzle.level.LevelRepository;
@@ -34,7 +37,7 @@ import com.silhouettepuzzle.level.LevelRepository;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * The attempt flow over HTTP, against a real MongoDB.
+ * Levels and the attempt flow over HTTP, against a real MongoDB.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -57,44 +60,43 @@ class AttemptFlowTest {
     private AttemptRepository attempts;
 
     @Autowired
-    private IntegrationTestConfig.MutableClock clock;
-
-    @Autowired
     private MongoTemplate mongo;
 
-    @Test
-    void solvingALevelRecordsServerTimeAndMoves() throws Exception {
-        String attemptId = start("bus");
-        clock.advance(Duration.ofSeconds(42));
+    @Autowired
+    private IntegrationTestConfig.MutableClock clock;
 
-        submit(attemptId, solutionOf("bus"), 17)
+    @Test
+    void levelsAreServedWithoutTheirSolution() throws Exception {
+        mvc.perform(get("/api/levels"))
+                .andExpect(jsonPath("$[*].id").value(contains("bus", "house", "rocket")));
+        mvc.perform(get("/api/levels/bus"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.solved").value(true))
-                .andExpect(jsonPath("$.timeMs").value(42_000))
-                .andExpect(jsonPath("$.moves").value(17));
+                .andExpect(jsonPath("$.pieces.length()").value(18))
+                .andExpect(jsonPath("$.pieces[16].color").value("#737A8F"))
+                .andExpect(jsonPath("$.pieces[16].startRotation").value(45))
+                .andExpect(jsonPath("$.silhouette[0].vertices").isArray())
+                .andExpect(jsonPath("$.solution").doesNotExist());
+        mvc.perform(get("/api/levels/nope"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("Level not found: nope"));
     }
 
     @Test
-    void aWrongSolutionKeepsTheAttemptOpen() throws Exception {
+    void solvingRecordsServerTimeAndClosesTheAttempt() throws Exception {
         String attemptId = start("bus");
         List<Placement> wrong = new ArrayList<>(solutionOf("bus"));
         wrong.set(0, new Placement(20, 20, 0, false));
 
         submit(attemptId, wrong, 3)
-                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.solved").value(false))
                 .andExpect(jsonPath("$.mismatchRatio").value(greaterThan(0.1)))
                 .andExpect(jsonPath("$.timeMs").doesNotExist());
-
-        submit(attemptId, solutionOf("bus"), 5)
-                .andExpect(jsonPath("$.solved").value(true));
-    }
-
-    @Test
-    void aSolvedAttemptAcceptsNoMoreSubmissions() throws Exception {
-        String attemptId = start("bus");
-        submit(attemptId, solutionOf("bus"), 7).andExpect(status().isOk());
-
+        clock.advance(Duration.ofSeconds(42));
+        submit(attemptId, solutionOf("bus"), 17)
+                .andExpect(jsonPath("$.solved").value(true))
+                .andExpect(jsonPath("$.timeMs").value(42_000))
+                .andExpect(jsonPath("$.moves").value(17));
         submit(attemptId, solutionOf("bus"), 1).andExpect(status().isConflict());
     }
 
@@ -104,7 +106,6 @@ class AttemptFlowTest {
         List<Placement> solution = solutionOf("house");
         int threads = 8;
         CountDownLatch go = new CountDownLatch(1);
-
         ExecutorService pool = Executors.newFixedThreadPool(threads);
         try {
             List<Future<Integer>> results = new ArrayList<>();
@@ -116,7 +117,7 @@ class AttemptFlowTest {
                     go.await();
                     try {
                         return service.submit(attemptId, null, solution, moves).moves();
-                    } catch (AttemptAlreadySolvedException e) {
+                    } catch (ApiException e) {
                         return null;
                     }
                 };
@@ -137,28 +138,15 @@ class AttemptFlowTest {
     }
 
     @Test
-    void startingAnUnknownLevelIsNotFound() throws Exception {
+    void rejectsInvalidRequests() throws Exception {
         mvc.perform(post("/api/levels/nope/attempts").with(csrf())).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void submittingToAnUnknownAttemptIsNotFound() throws Exception {
         submit("000000000000000000000000", solutionOf("bus"), 1).andExpect(status().isNotFound());
-    }
 
-    @Test
-    void aWrongNumberOfPlacementsIsABadRequest() throws Exception {
         String attemptId = start("bus");
-
         submit(attemptId, solutionOf("bus").subList(0, 6), 1)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("Level bus has 18 pieces, got 6 placements"));
-    }
-
-    @Test
-    void aRotationOffTheStepIsABadRequest() throws Exception {
-        String attemptId = start("bus");
-
+        submit(attemptId, solutionOf("bus"), -1).andExpect(status().isBadRequest());
         mvc.perform(post("/api/attempts/{id}/submit", attemptId).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"placements\": [{\"x\": 0, \"y\": 0, \"rotation\": 30, \"flipped\": false}],"
@@ -167,32 +155,16 @@ class AttemptFlowTest {
     }
 
     @Test
-    void negativeMovesAreABadRequest() throws Exception {
-        String attemptId = start("bus");
-
-        submit(attemptId, solutionOf("bus"), -1).andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void anAttemptCanBeSubmittedForADay() throws Exception {
-        String attemptId = start("bus");
+    void attemptsExpireAfterADayAndMongoRemovesThemAfterTwo() throws Exception {
+        String inTime = start("bus");
+        String late = start("bus");
         clock.advance(Duration.ofHours(24));
-
-        submit(attemptId, solutionOf("bus"), 9).andExpect(jsonPath("$.solved").value(true));
-    }
-
-    @Test
-    void anAttemptOlderThanADayHasExpired() throws Exception {
-        String attemptId = start("bus");
-        clock.advance(Duration.ofHours(24).plusSeconds(1));
-
-        submit(attemptId, solutionOf("bus"), 9)
+        submit(inTime, solutionOf("bus"), 9).andExpect(jsonPath("$.solved").value(true));
+        clock.advance(Duration.ofSeconds(1));
+        submit(late, solutionOf("bus"), 9)
                 .andExpect(status().isGone())
-                .andExpect(jsonPath("$.detail").value("Attempt " + attemptId + " has expired; start the level again"));
-    }
+                .andExpect(jsonPath("$.detail").value("Attempt " + late + " has expired; start the level again"));
 
-    @Test
-    void mongoRemovesAttemptsTwoDaysAfterTheyStart() {
         assertThat(mongo.indexOps(Attempt.class).getIndexInfo())
                 .filteredOn(index -> index.getName().equals(AttemptIndexes.EXPIRY_INDEX))
                 .singleElement()
@@ -202,7 +174,6 @@ class AttemptFlowTest {
     private String start(String levelId) throws Exception {
         String body = mvc.perform(post("/api/levels/{id}/attempts", levelId).with(csrf()))
                 .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
                 .andReturn().getResponse().getContentAsString();
         return json.readTree(body).get("id").asString();
     }

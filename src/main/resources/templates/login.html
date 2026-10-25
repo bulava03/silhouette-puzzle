@@ -59,9 +59,11 @@
             <a th:href="@{/}">Play as a guest</a>; your times only count once you log in.</p>
     </section>
 
-    <section class="auth__art" th:if="${art != null}" aria-label="A built picture">
-        <svg th:attr="viewBox=${art.viewBox},aria-label='A ' + ${#strings.toLowerCase(art.name)} + ' built from its parts'" role="img">
-            <polygon th:each="part : ${art.parts}" th:attr="points=${part.points},fill=${part.color},stroke=${part.color}"
+    <section class="auth__art" th:unless="${#lists.isEmpty(levels)}" aria-label="A built picture"
+             th:with="art=${levels[0]}, picture=${svg.picture(levels[0])}">
+        <svg th:attr="viewBox=${svg.viewBox(picture)},aria-label='A ' + ${#strings.toLowerCase(art.name)} + ' built from its parts'" role="img">
+            <polygon th:each="part, i : ${picture}"
+                     th:attr="points=${svg.points(part)},fill=${art.pieces[i.index].color},stroke=${art.pieces[i.index].color}"
                      fill-opacity="0.5" stroke-width="0.04" stroke-linejoin="round"></polygon>
         </svg>
         <p class="auth__caption" th:text="'Level 01 · ' + ${art.name} + ' · built'">Level 01 · Bus · built</p>

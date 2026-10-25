@@ -1,5 +1,8 @@
 package com.silhouettepuzzle.attempt;
 
+import static org.springframework.data.mongodb.core.query.Criteria.where;
+import static org.springframework.data.mongodb.core.query.Query.query;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -7,16 +10,14 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
+import com.silhouettepuzzle.ApiException;
 import com.silhouettepuzzle.geometry.CheckResult;
 import com.silhouettepuzzle.geometry.Placement;
 import com.silhouettepuzzle.geometry.SolutionChecker;
 import com.silhouettepuzzle.level.Level;
-import com.silhouettepuzzle.level.LevelNotFoundException;
 import com.silhouettepuzzle.level.LevelRepository;
 import com.silhouettepuzzle.player.PlayerBests;
 import com.silhouettepuzzle.player.PlayerPrincipal;
@@ -36,17 +37,6 @@ public class AttemptService {
     private final Clock clock;
     private final Duration lifetime;
 
-    /**
-     * Creates the service.
-     *
-     * @param attempts attempt storage
-     * @param levels   level storage
-     * @param mongo    template for the conditional "mark solved" update
-     * @param checker  solution checker
-     * @param bests    where players' solved runs are recorded
-     * @param clock    source of the current time
-     * @param lifetime how long after its start an attempt can be submitted
-     */
     public AttemptService(AttemptRepository attempts, LevelRepository levels, MongoTemplate mongo,
                           SolutionChecker checker, PlayerBests bests, Clock clock,
                           @Value("${app.attempts.lifetime}") Duration lifetime) {
@@ -59,78 +49,54 @@ public class AttemptService {
         this.lifetime = lifetime;
     }
 
-    /**
-     * Starts a timed attempt at a level.
-     *
-     * @param levelId the level to play
-     * @param player  the logged-in player, or null when anonymous
-     * @return the stored attempt
-     */
     public Attempt start(String levelId, PlayerPrincipal player) {
         if (!levels.existsById(levelId)) {
-            throw new LevelNotFoundException(levelId);
+            throw Level.notFound(levelId);
         }
         return attempts.save(Attempt.start(levelId, player, clock.instant()));
     }
 
     /**
-     * Checks a submitted solution. An unsolved attempt stays open, so the
-     * player can keep going, until its lifetime runs out; a solved one
-     * accepts no further submissions. A player's solved run goes to their bests.
-     *
-     * @param attemptId  the attempt
-     * @param player     the logged-in player, or null when anonymous
-     * @param placements placement of each level piece, in level order
-     * @param moves      number of moves the client reports
-     * @return the verdict, with the time if the solution was accepted
+     * Checks a solution. A rejected one keeps the attempt open until its
+     * lifetime runs out; an accepted one closes it and goes to the player's bests.
      */
     public SubmitResult submit(String attemptId, PlayerPrincipal player, List<Placement> placements, int moves) {
-        // Someone else's attempt is reported as missing rather than forbidden,
-        // so attempt ids of other players cannot be probed.
+        // Someone else's attempt is reported as missing, so ids cannot be probed.
         Attempt attempt = attempts.findById(attemptId)
                 .filter(found -> found.playableBy(player))
-                .orElseThrow(() -> new AttemptNotFoundException(attemptId));
-        if (attempt.solved()) {
-            throw new AttemptAlreadySolvedException(attemptId);
+                .orElseThrow(() -> ApiException.notFound("Attempt not found: " + attemptId));
+        if (attempt.solvedAt() != null) {
+            throw alreadySolved(attemptId);
         }
         Instant now = clock.instant();
         if (Duration.between(attempt.startedAt(), now).compareTo(lifetime) > 0) {
-            throw new AttemptExpiredException(attemptId);
+            throw ApiException.gone("Attempt " + attemptId + " has expired; start the level again");
         }
-        Level level = levels.findById(attempt.levelId())
-                .orElseThrow(() -> new LevelNotFoundException(attempt.levelId()));
+        Level level = levels.findById(attempt.levelId()).orElseThrow(() -> Level.notFound(attempt.levelId()));
         if (placements.size() != level.pieces().size()) {
-            throw new InvalidSubmissionException(
-                    "Level " + level.id() + " has " + level.pieces().size() + " pieces, got "
-                            + placements.size() + " placements");
+            throw ApiException.badRequest("Level " + level.id() + " has " + level.pieces().size()
+                    + " pieces, got " + placements.size() + " placements");
         }
 
         CheckResult result = checker.check(level.silhouette(), level.pieceOutlines(), placements);
         if (!result.solved()) {
-            return SubmitResult.unsolved(result);
+            return SubmitResult.of(result, null, null);
         }
         long timeMs = Duration.between(attempt.startedAt(), now).toMillis();
-        markSolved(attemptId, now, timeMs, moves);
+        // Only an attempt that is still unsolved gets marked, so of concurrent
+        // correct submissions exactly one counts.
+        Update solved = new Update().set("solvedAt", now).set("timeMs", timeMs).set("moves", moves);
+        if (mongo.updateFirst(query(where("_id").is(attemptId).and("solvedAt").isNull()), solved, Attempt.class)
+                .getModifiedCount() == 0) {
+            throw alreadySolved(attemptId);
+        }
         if (attempt.playerId() != null) {
             bests.record(attempt.playerId(), level.id(), timeMs, moves, now);
         }
-        return SubmitResult.solved(result, timeMs, moves);
+        return SubmitResult.of(result, timeMs, moves);
     }
 
-    /**
-     * Marks the attempt solved only if it is still unsolved, so of two
-     * concurrent correct submissions exactly one is recorded.
-     *
-     * @param attemptId the attempt
-     * @param solvedAt  when the solution was accepted
-     * @param timeMs    time from start to the solution
-     * @param moves     reported moves
-     */
-    private void markSolved(String attemptId, Instant solvedAt, long timeMs, int moves) {
-        Query unsolved = Query.query(Criteria.where("_id").is(attemptId).and("solvedAt").isNull());
-        Update update = new Update().set("solvedAt", solvedAt).set("timeMs", timeMs).set("moves", moves);
-        if (mongo.updateFirst(unsolved, update, Attempt.class).getModifiedCount() == 0) {
-            throw new AttemptAlreadySolvedException(attemptId);
-        }
+    private static ApiException alreadySolved(String attemptId) {
+        return ApiException.conflict("Attempt already solved: " + attemptId);
     }
 }

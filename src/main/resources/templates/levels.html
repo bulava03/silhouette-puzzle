@@ -15,31 +15,31 @@
                     turn them in 45° steps, flip them when you need to. The server checks every solution.</p>
             </div>
             <div class="score card" th:if="${me != null}">
-                <span class="score__value"><th:block th:text="${solvedCount}">2</th:block><span th:text="'/' + ${#lists.size(levels)}">/3</span></span>
+                <span class="score__value"><th:block th:text="${#maps.size(bests)}">2</th:block><span th:text="'/' + ${#lists.size(levels)}">/3</span></span>
                 <span class="score__label">pictures<br>built</span>
             </div>
         </div>
 
         <div class="levels">
-            <article class="level-card card" th:each="level : ${levels}" th:attr="data-level=${level.id}">
+            <article class="level-card card" th:each="level, iter : ${levels}" th:with="best=${bests[level.id]}">
                 <div class="level-card__art">
-                    <svg th:attr="viewBox=${level.viewBox},aria-label=${level.name} + ' silhouette'" role="img"
-                         data-void th:data-accent="${level.accent}">
-                        <polygon th:each="part : ${level.silhouette}" th:attr="points=${part}"></polygon>
+                    <svg th:attr="viewBox=${svg.viewBox(level.silhouette)},aria-label=${level.name} + ' silhouette'"
+                         role="img" data-void th:data-accent="${svg.accent(iter.index)}">
+                        <polygon th:each="part : ${level.silhouette}" th:attr="points=${svg.points(part)}"></polygon>
                     </svg>
                 </div>
                 <div class="level-card__body">
                     <div class="level-card__head">
-                        <span class="level-card__number" th:text="${level.number}">01</span>
+                        <span class="level-card__number" th:text="${#numbers.formatInteger(level.number, 2)}">01</span>
                         <h2 class="level-card__name" th:text="${level.name}">Bus</h2>
-                        <span class="level-card__parts" th:text="${level.parts} + ' parts'">18 parts</span>
+                        <span class="level-card__parts" th:text="${#lists.size(level.pieces)} + ' parts'">18 parts</span>
                     </div>
-                    <div class="level-card__status" th:if="${level.solved}">
+                    <div class="level-card__status" th:if="${best != null}">
                         <span class="badge badge--built">BUILT</span>
-                        <span class="level-card__best" th:text="${level.best}">01:07</span>
-                        <span th:text="${level.moves} + ' moves'">31 moves</span>
+                        <span class="level-card__best" th:text="${svg.clock(best.timeMs)}">01:07</span>
+                        <span th:text="${best.moves} + ' moves'">31 moves</span>
                     </div>
-                    <div class="level-card__status" th:unless="${level.solved}">
+                    <div class="level-card__status" th:if="${best == null}">
                         <span class="badge badge--new">NEW</span>
                         <span th:text="${me != null} ? 'Not built yet' : 'Log in to keep your times'">Not built yet</span>
                     </div>

@@ -5,11 +5,10 @@ import java.time.Clock;
 import java.util.List;
 
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.ErrorResponseException;
+
+import com.silhouettepuzzle.ApiException;
 
 /**
  * Registers players.
@@ -24,41 +23,30 @@ public class PlayerService {
     private final PasswordEncoder encoder;
     private final Clock clock;
 
-    /**
-     * Creates the service.
-     *
-     * @param players player storage
-     * @param encoder password encoder
-     * @param clock   source of the registration time
-     */
     public PlayerService(PlayerRepository players, PasswordEncoder encoder, Clock clock) {
         this.players = players;
         this.encoder = encoder;
         this.clock = clock;
     }
 
-    /**
-     * Registers a player.
-     *
-     * @param request username and password, already validated for format
-     * @return the new player
-     */
     public Player register(RegisterRequest request) {
         if (request.password().getBytes(StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES) {
-            throw new ErrorResponseException(HttpStatus.BAD_REQUEST, ProblemDetail.forStatusAndDetail(
-                    HttpStatus.BAD_REQUEST, "Password must be at most 72 bytes in UTF-8"), null);
+            throw ApiException.badRequest("Password must be at most 72 bytes in UTF-8");
         }
         String key = Player.keyOf(request.username());
         if (players.existsByUsernameKey(key)) {
-            throw new UsernameTakenException(request.username());
+            throw taken(request.username());
         }
-        Player player = new Player(null, request.username(), key, encoder.encode(request.password()), clock.instant(),
-                List.of());
         try {
-            return players.save(player);
+            return players.save(new Player(null, request.username(), key, encoder.encode(request.password()),
+                    clock.instant(), List.of()));
         } catch (DuplicateKeyException e) {
             // Someone registered the same name between the check and the insert.
-            throw new UsernameTakenException(request.username());
+            throw taken(request.username());
         }
+    }
+
+    private static ApiException taken(String username) {
+        return ApiException.conflict("Username is taken: " + username);
     }
 }

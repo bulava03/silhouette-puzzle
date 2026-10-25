@@ -10,20 +10,14 @@ import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 
 /**
- * OpenAPI description of the REST API, served at {@code /v3/api-docs} and
- * browsable at {@code /swagger-ui.html}.
+ * The OpenAPI description, served at {@code /v3/api-docs} and browsable at
+ * {@code /swagger-ui.html}.
  */
 @Configuration(proxyBeanMethods = false)
 public class OpenApiConfig {
 
-    /** Name of the session cookie security scheme. */
     public static final String SESSION = "session";
 
-    /**
-     * The API description.
-     *
-     * @return the OpenAPI model
-     */
     @Bean
     public OpenAPI openApi() {
         return new OpenAPI()
@@ -31,7 +25,7 @@ public class OpenApiConfig {
                         .title("Silhouette Puzzle API")
                         .version("v1")
                         .description("""
-                                Tangram-style puzzle with server-side geometry checking.
+                                Picture-building puzzle with server-side geometry checking.
 
                                 Log in through `POST /login` (form fields `username` and `password`); \
                                 the session cookie then authenticates further calls. Every POST needs \

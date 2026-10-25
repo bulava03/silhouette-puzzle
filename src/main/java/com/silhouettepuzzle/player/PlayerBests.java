@@ -11,36 +11,20 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 
 /**
- * Records solved runs into the players' bests.
- *
- * <p>Every step is a single conditional update, so concurrent solves of the
- * same player never lose a count, never add a level twice and never replace
- * a better run with a worse one.
+ * Records solved runs into the players' bests. Every step is one
+ * conditional update, so concurrent solves never lose a count, never add a
+ * level twice and never replace a better run with a worse one.
  */
 @Component
 public class PlayerBests {
 
     private final MongoTemplate mongo;
 
-    /**
-     * Creates the recorder.
-     *
-     * @param mongo template for the conditional updates
-     */
     public PlayerBests(MongoTemplate mongo) {
         this.mongo = mongo;
     }
 
-    /**
-     * Counts a solved run and keeps it if it beats the player's best:
-     * faster, or as fast with fewer moves.
-     *
-     * @param playerId the player
-     * @param levelId  the level
-     * @param timeMs   server-measured time
-     * @param moves    reported moves
-     * @param solvedAt when it was solved
-     */
+    /** Counts a solved run and keeps it if it is faster, or as fast with fewer moves. */
     public void record(String playerId, String levelId, long timeMs, int moves, Instant solvedAt) {
         if (!countSolve(playerId, levelId)) {
             Query withoutLevel = query(where("_id").is(playerId).and("bests.levelId").ne(levelId));
@@ -53,9 +37,8 @@ public class PlayerBests {
         }
         Query worse = query(where("_id").is(playerId).and("bests").elemMatch(where("levelId").is(levelId)
                 .orOperator(where("timeMs").gt(timeMs), where("timeMs").is(timeMs).and("moves").gt(moves))));
-        Update better = new Update().set("bests.$.timeMs", timeMs).set("bests.$.moves", moves)
-                .set("bests.$.solvedAt", solvedAt);
-        mongo.updateFirst(worse, better, Player.class);
+        mongo.updateFirst(worse, new Update().set("bests.$.timeMs", timeMs).set("bests.$.moves", moves)
+                .set("bests.$.solvedAt", solvedAt), Player.class);
     }
 
     private boolean countSolve(String playerId, String levelId) {

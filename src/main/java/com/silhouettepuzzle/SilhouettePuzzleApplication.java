@@ -9,11 +9,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class SilhouettePuzzleApplication {
 
-    /**
-     * Starts the application.
-     *
-     * @param args command-line arguments
-     */
     public static void main(String[] args) {
         SpringApplication.run(SilhouettePuzzleApplication.class, args);
     }

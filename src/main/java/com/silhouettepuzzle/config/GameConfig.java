@@ -9,27 +9,17 @@ import org.springframework.context.annotation.Configuration;
 import com.silhouettepuzzle.geometry.SolutionChecker;
 
 /**
- * Beans of the game logic that is kept free of Spring.
+ * Beans for the game logic, which itself stays free of Spring. The clock is
+ * a bean so tests can control time.
  */
 @Configuration(proxyBeanMethods = false)
 public class GameConfig {
 
-    /**
-     * The solution checker with the configured tolerance.
-     *
-     * @param tolerance allowed overlap and mismatch, as a fraction of the silhouette area
-     * @return the checker
-     */
     @Bean
     public SolutionChecker solutionChecker(@Value("${app.solution.tolerance}") double tolerance) {
         return new SolutionChecker(tolerance);
     }
 
-    /**
-     * The clock attempts are timed with; replaced by a fixed clock in tests.
-     *
-     * @return the system clock in UTC
-     */
     @Bean
     public Clock clock() {
         return Clock.systemUTC();

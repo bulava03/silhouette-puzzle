@@ -4,19 +4,11 @@ import java.util.List;
 
 /**
  * A simple polygon given by its vertices in order, without repeating the
- * first vertex at the end. Used both for puzzle pieces (in the piece's own
- * coordinates) and for the parts of a silhouette (in board coordinates).
- *
- * <p>The outline is validated on creation: it needs at least three vertices,
- * a non-zero area and no self-intersections.
- *
- * @param vertices polygon vertices in order
+ * first one. Used for pieces (around their own origin) and for silhouette
+ * parts (on the board). It must have a non-zero area and no self-intersections.
  */
 public record Outline(List<Point> vertices) {
 
-    /**
-     * Copies the vertices and checks that they form a valid polygon.
-     */
     public Outline {
         if (vertices == null || vertices.size() < 3) {
             throw new IllegalArgumentException("An outline needs at least 3 vertices");
@@ -27,12 +19,7 @@ public record Outline(List<Point> vertices) {
         }
     }
 
-    /**
-     * Creates an outline from a flat list of coordinates.
-     *
-     * @param coordinates x and y of each vertex in turn: x1, y1, x2, y2, ...
-     * @return the outline
-     */
+    /** Creates an outline from coordinates given as x1, y1, x2, y2, ... */
     public static Outline of(double... coordinates) {
         if (coordinates.length % 2 != 0) {
             throw new IllegalArgumentException("Coordinates must come in x, y pairs");
@@ -44,11 +31,6 @@ public record Outline(List<Point> vertices) {
         return new Outline(List.of(points));
     }
 
-    /**
-     * Returns the area enclosed by the outline.
-     *
-     * @return the area, always positive
-     */
     public double area() {
         return Geometries.toPolygon(vertices).getArea();
     }

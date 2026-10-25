@@ -12,36 +12,25 @@ import org.locationtech.jts.precision.GeometryPrecisionReducer;
 import org.locationtech.jts.simplify.DouglasPeuckerSimplifier;
 
 /**
- * Builds a silhouette from a reference solution. Deriving the silhouette
- * from placed pieces guarantees that every level has a solution.
+ * Builds a silhouette from a reference solution, so every level has one.
  */
 public final class Silhouettes {
 
-    /** Silhouette vertices are rounded to this many units per board unit. */
     private static final PrecisionModel PRECISION = new PrecisionModel(1e6);
-
-    /** Pieces of a reference solution must not overlap beyond float noise. */
     private static final double MAX_OVERLAP_RATIO = 1e-9;
-
-    /** Vertices closer than this to a straight edge are dropped. */
     private static final double COLLINEAR_TOLERANCE = 1e-6;
 
     private Silhouettes() {
     }
 
     /**
-     * Unites placed pieces into a silhouette.
-     *
-     * @param pieces     piece outlines in their own coordinates
-     * @param placements placement of each piece, in the same order as pieces
-     * @return the silhouette parts; more than one when pieces only touch at a point
-     * @throws IllegalArgumentException if pieces overlap or enclose a hole
+     * Unites placed pieces into silhouette parts; more than one part when
+     * pieces only touch at a point. Overlapping pieces and holes are rejected.
      */
     public static List<Outline> assemble(List<Outline> pieces, List<Placement> placements) {
         if (pieces.isEmpty() || pieces.size() != placements.size()) {
-            throw new IllegalArgumentException(
-                    "Need one placement per piece, got " + pieces.size() + " pieces and "
-                            + placements.size() + " placements");
+            throw new IllegalArgumentException("Need one placement per piece, got " + pieces.size()
+                    + " pieces and " + placements.size() + " placements");
         }
         List<Geometry> placed = new ArrayList<>(pieces.size());
         double piecesArea = 0;
@@ -54,7 +43,7 @@ public final class Silhouettes {
         if (piecesArea - union.getArea() > MAX_OVERLAP_RATIO * piecesArea) {
             throw new IllegalArgumentException("Pieces of the reference solution overlap");
         }
-
+        // Round away float noise, then drop vertices where pieces meet along a straight edge.
         Geometry clean = DouglasPeuckerSimplifier.simplify(
                 GeometryPrecisionReducer.reduce(union, PRECISION), COLLINEAR_TOLERANCE);
         List<Outline> parts = new ArrayList<>(clean.getNumGeometries());
@@ -70,8 +59,8 @@ public final class Silhouettes {
         }
         Coordinate[] ring = polygon.getExteriorRing().getCoordinates();
         List<Point> vertices = new ArrayList<>(ring.length - 1);
-        // The ring repeats its first vertex at the end; adding 0.0 turns -0.0 into 0.0.
         for (int i = 0; i < ring.length - 1; i++) {
+            // Adding 0.0 turns -0.0 into 0.0.
             vertices.add(new Point(ring[i].x + 0.0, ring[i].y + 0.0));
         }
         return new Outline(vertices);

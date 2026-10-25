@@ -15,42 +15,25 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  */
 @RestController
 @RequestMapping("/api/levels")
-@Tag(name = "Levels", description = "Puzzle levels")
+@Tag(name = "Levels", description = "Pictures to build")
 public class LevelController {
 
     private final LevelRepository levels;
 
-    /**
-     * Creates the controller.
-     *
-     * @param levels level storage
-     */
     public LevelController(LevelRepository levels) {
         this.levels = levels;
     }
 
-    /**
-     * Lists all levels in play order.
-     *
-     * @return level summaries
-     */
     @GetMapping
     @Operation(summary = "List levels in play order")
-    public List<LevelSummary> list() {
+    public List<Level> list() {
         return levels.findAllByOrderByNumberAsc();
     }
 
-    /**
-     * Returns one level ready to play.
-     *
-     * @param id level identifier
-     * @return the level without its reference solution
-     */
     @GetMapping("/{id}")
     @Operation(summary = "Get a level to play",
-            description = "Silhouette in board coordinates and pieces in their own coordinates. "
-                    + "The reference solution is never included.")
-    public LevelView get(@PathVariable String id) {
-        return levels.findById(id).map(LevelView::of).orElseThrow(() -> new LevelNotFoundException(id));
+            description = "Silhouette on the board and parts around their own origins; never the solution.")
+    public Level get(@PathVariable String id) {
+        return levels.findById(id).orElseThrow(() -> Level.notFound(id));
     }
 }
