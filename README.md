@@ -33,12 +33,31 @@ the server and is never sent to clients.
 
 ## API
 
-| Method | Path               | Description                              |
-|--------|--------------------|------------------------------------------|
-| GET    | `/api/levels`      | Levels in play order                     |
-| GET    | `/api/levels/{id}` | Silhouette and pieces of one level       |
+| Method | Path                           | Description                            |
+|--------|--------------------------------|----------------------------------------|
+| GET    | `/api/levels`                  | Levels in play order                   |
+| GET    | `/api/levels/{id}`             | Silhouette and pieces of one level     |
+| POST   | `/api/levels/{id}/attempts`    | Start a timed attempt                  |
+| POST   | `/api/attempts/{id}/submit`    | Submit piece placements for checking   |
 
 Errors are returned as RFC 9457 problem details.
+
+### Solving a level
+
+The server starts the clock when an attempt begins and stops it when it
+accepts a solution; the client never reports a time. A submission carries a
+placement per piece (position, rotation in 45° steps, mirrored or not) and a
+move count:
+
+```json
+{"placements": [{"x": 2, "y": 2, "rotation": 90, "flipped": false}, ...], "moves": 12}
+```
+
+The server places the pieces, unites them with JTS and accepts the solution
+when the overlap between pieces and the difference from the silhouette both
+stay within 1% of the silhouette area. A rejected submission keeps the
+attempt open. An accepted one is recorded by a conditional update, so of two
+concurrent correct submissions exactly one counts.
 
 ## Getting started
 

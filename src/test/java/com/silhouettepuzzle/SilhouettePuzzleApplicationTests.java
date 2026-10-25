@@ -15,7 +15,7 @@ import com.silhouettepuzzle.level.LevelSeeder;
  * Starts the whole application against a real MongoDB in a container.
  */
 @SpringBootTest
-@Import(MongoTestContainer.class)
+@Import(IntegrationTestConfig.class)
 class SilhouettePuzzleApplicationTests {
 
     @Autowired
