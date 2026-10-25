@@ -160,6 +160,20 @@ the `MONGODB_URI` environment variable.
 ./mvnw verify
 ```
 
+runs the unit and integration tests against MongoDB in Testcontainers.
+
+Browser tests build pictures by dragging, turning and flipping parts as a
+player would. They run with Playwright against a separate stack with a
+throwaway database on port 8081, built from the same image:
+
+```bash
+docker compose -f docker-compose.e2e.yml up -d --build
+cd e2e && npm ci && npx playwright install chromium
+npx playwright test --output <folder outside synced storage>
+```
+
+CI runs both on every push.
+
 ## License
 
 [MIT](LICENSE)

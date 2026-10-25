@@ -269,7 +269,8 @@
         game.edge = draw(svg, layout.silhouette, root.dataset.accent);
 
         game.nodes = game.level.pieces.map((piece, i) => {
-            const g = el('g', { class: 'piece' }, svg);
+            // data-index names the part, since the selected part moves to the end to draw on top.
+            const g = el('g', { class: 'piece', 'data-index': i }, svg);
             el('polygon', {
                 points: layout.shapes[i].map((v) => v.join(',')).join(' '),
                 fill: piece.color, stroke: piece.color, 'stroke-linejoin': 'round', filter: 'url(#part-glow)'

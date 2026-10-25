@@ -34,6 +34,8 @@
         </div>
         <div class="account" th:if="${me == null and active != 'login'}">
             <a th:href="@{/login}">Log in</a>
+            <span class="account__separator" aria-hidden="true">·</span>
+            <a th:href="@{/login(mode='register')}">Register</a>
         </div>
     </div>
 </header>
