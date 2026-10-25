@@ -6,18 +6,18 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.silhouettepuzzle.geometry.SolutionChecker;
+import com.silhouettepuzzle.geometry.PuzzleGeometry;
 
 /**
- * Beans for the game logic, which itself stays free of Spring. The clock is
- * a bean so tests can control time.
+ * Beans for the game: the geometry, which itself stays free of Spring, and
+ * the clock attempts are timed with, so tests can control time.
  */
 @Configuration(proxyBeanMethods = false)
 public class GameConfig {
 
     @Bean
-    public SolutionChecker solutionChecker(@Value("${app.solution.tolerance}") double tolerance) {
-        return new SolutionChecker(tolerance);
+    public PuzzleGeometry puzzleGeometry(@Value("${app.solution.tolerance}") double tolerance) {
+        return new PuzzleGeometry(tolerance);
     }
 
     @Bean

@@ -8,7 +8,7 @@
     <div class="intro__text">
         <span class="eyebrow eyebrow--amber">Hall of fame</span>
         <h1 class="title title--page">Fastest builders</h1>
-        <p class="lead">Each player's best run. Faster time wins; on a tie, fewer moves; then whoever got there first.</p>
+        <p class="lead">Each player's best time, measured by the server. On a tie, whoever got there first.</p>
     </div>
 
     <nav class="tabs" aria-label="Levels">
@@ -19,11 +19,11 @@
     </nav>
 
     <div class="podium" th:unless="${#lists.isEmpty(rows)}">
-        <div class="card podium__spot" th:each="spot : ${rows}" th:if="${spot.rank <= 3}"
-             th:classappend="'podium__spot--' + ${spot.rank}">
-            <span class="podium__rank" th:text="'#' + ${spot.rank}">#1</span>
+        <div class="card podium__spot" th:each="spot, place : ${rows}" th:if="${place.count <= 3}"
+             th:classappend="'podium__spot--' + ${place.count}">
+            <span class="podium__rank" th:text="'#' + ${place.count}">#1</span>
             <span class="podium__name" th:text="${spot.username}">mira</span>
-            <span class="podium__run"><th:block th:text="${svg.clock(spot.timeMs)}">00:52</th:block> <span th:text="'· ' + ${spot.moves} + ' moves'">· 21 moves</span></span>
+            <span class="podium__run" th:text="${svg.clock(spot.bests[0].timeMs)}">00:52</span>
         </div>
     </div>
 
@@ -35,18 +35,16 @@
                 <th scope="col">Rank</th>
                 <th scope="col">Player</th>
                 <th scope="col">Time</th>
-                <th scope="col">Moves</th>
                 <th scope="col">Built</th>
             </tr>
             </thead>
             <tbody>
-            <tr th:each="row : ${rows}" th:with="mine=${me != null and row.username == me.username}"
+            <tr th:each="row, place : ${rows}" th:with="mine=${me != null and row.username == me.username}"
                 th:classappend="${mine} ? 'is-me'">
-                <td class="rank" th:text="${row.rank}">1</td>
+                <td class="rank" th:text="${place.count}">1</td>
                 <td><strong th:text="${row.username}">mira</strong><span class="you" th:if="${mine}"> (you)</span></td>
-                <td class="mono" th:text="${svg.clock(row.timeMs)}">00:52</td>
-                <td class="mono" th:text="${row.moves}">21</td>
-                <td th:text="${svg.day(row.solvedAt)}">24 Oct</td>
+                <td class="mono" th:text="${svg.clock(row.bests[0].timeMs)}">00:52</td>
+                <td th:text="${svg.day(row.bests[0].solvedAt)}">24 Oct</td>
             </tr>
             </tbody>
         </table>

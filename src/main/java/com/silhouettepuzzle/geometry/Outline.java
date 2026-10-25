@@ -14,7 +14,7 @@ public record Outline(List<Point> vertices) {
             throw new IllegalArgumentException("An outline needs at least 3 vertices");
         }
         vertices = List.copyOf(vertices);
-        if (!Geometries.toPolygon(vertices).isValid()) {
+        if (!PuzzleGeometry.toPolygon(vertices).isValid()) {
             throw new IllegalArgumentException("Outline is not a valid simple polygon: " + vertices);
         }
     }
@@ -32,6 +32,6 @@ public record Outline(List<Point> vertices) {
     }
 
     public double area() {
-        return Geometries.toPolygon(vertices).getArea();
+        return PuzzleGeometry.toPolygon(vertices).getArea();
     }
 }

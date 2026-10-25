@@ -59,7 +59,7 @@ class DatabaseMigrationsTest {
         assertThat(mongo.getDb().getCollection(CHANGELOG_TABLE).find())
                 .extracting(entry -> entry.getString("id"))
                 .containsExactly("001-player-indexes", "002-move-results-into-players", "002-drop-attempt-indexes",
-                        "003-expire-old-attempts");
+                        "003-expire-old-attempts", "004-bests-are-attempts");
         assertThat(mongo.getDb().getCollection("players").listIndexes())
                 .anySatisfy(index -> {
                     assertThat(index.getString("name")).isEqualTo("usernameKey");
@@ -68,13 +68,14 @@ class DatabaseMigrationsTest {
     }
 
     @Test
-    void movesSolvedAttemptsIntoThePlayersBestsAndCleansUp() throws Exception {
+    void turnsSolvedAttemptsIntoThePlayersBestsAndCleansUp() throws Exception {
         ObjectId alice = new ObjectId();
         ObjectId bob = new ObjectId();
         old.getCollection("players").insertMany(List.of(
                 new Document("_id", alice).append("username", "alice").append("usernameKey", "alice"),
                 new Document("_id", bob).append("username", "bob").append("usernameKey", "bob")
-                        .append("bests", List.of(best("house", 9_000, 4, T1, 1)))));
+                        .append("bests", List.of(new Document("levelId", "house").append("timeMs", 9_000L)
+                                .append("moves", 4).append("solvedAt", T1).append("solves", 1)))));
         old.getCollection("attempts").insertMany(List.of(
                 solved(alice, "bus", 30_000, 20, T1),
                 solved(alice, "bus", 25_000, 30, T2),
@@ -88,11 +89,13 @@ class DatabaseMigrationsTest {
 
         DatabaseMigrations.update(oldUrl);
 
-        assertThat(bestsOf(alice)).containsExactlyInAnyOrder(
-                best("bus", 25_000, 30, T2, 2), best("house", 40_000, 9, T1, 1));
-        assertThat(bestsOf(bob)).containsExactly(best("house", 9_000, 4, T1, 1));
-        assertThat(old.getCollection("attempts").countDocuments(new Document("username", new Document("$exists", true))))
-                .isZero();
+        // 002 moved the best run of each player and level, 004 turned it into an attempt.
+        assertThat(bestsOf(alice)).containsExactlyInAnyOrder(best("bus", 25_000, T2), best("house", 40_000, T1));
+        assertThat(bestsOf(bob)).containsExactly(best("house", 9_000, T1));
+        for (String field : List.of("username", "moves")) {
+            assertThat(old.getCollection("attempts").countDocuments(new Document(field, new Document("$exists", true))))
+                    .as(field).isZero();
+        }
         assertThat(old.getCollection("attempts").listIndexes())
                 .extracting(index -> index.getString("name"))
                 .containsExactlyInAnyOrder("_id_", "attempt-expiry");
@@ -124,8 +127,8 @@ class DatabaseMigrationsTest {
                 .append("startedAt", at).append("solvedAt", at).append("timeMs", timeMs).append("moves", moves);
     }
 
-    private static Document best(String levelId, long timeMs, int moves, Date at, int solves) {
-        return new Document("levelId", levelId).append("timeMs", timeMs).append("moves", moves)
-                .append("solvedAt", at).append("solves", solves);
+    private static Document best(String levelId, long timeMs, Date solvedAt) {
+        return new Document("levelId", levelId).append("startedAt", new Date(solvedAt.getTime() - timeMs))
+                .append("solvedAt", solvedAt).append("timeMs", timeMs);
     }
 }

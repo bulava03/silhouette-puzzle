@@ -41,7 +41,8 @@ public class IntegrationTestConfig {
      */
     public static final class MutableClock extends Clock {
 
-        private volatile Instant now;
+        private Instant now;
+        private boolean ticking;
 
         MutableClock(Instant start) {
             this.now = start;
@@ -52,12 +53,20 @@ public class IntegrationTestConfig {
          *
          * @param duration how far
          */
-        public void advance(Duration duration) {
+        public synchronized void advance(Duration duration) {
             now = now.plus(duration);
         }
 
+        /** Makes every reading a millisecond later than the one before, until switched off. */
+        public synchronized void tickOnEveryRead(boolean on) {
+            ticking = on;
+        }
+
         @Override
-        public Instant instant() {
+        public synchronized Instant instant() {
+            if (ticking) {
+                now = now.plusMillis(1);
+            }
             return now;
         }
 

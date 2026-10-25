@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/002-move-results-into-players.yaml
   - include:
       file: db/changelog/003-expire-old-attempts.yaml
+  - include:
+      file: db/changelog/004-bests-are-attempts.yaml

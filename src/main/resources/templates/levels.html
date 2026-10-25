@@ -37,7 +37,6 @@
                     <div class="level-card__status" th:if="${best != null}">
                         <span class="badge badge--built">BUILT</span>
                         <span class="level-card__best" th:text="${svg.clock(best.timeMs)}">01:07</span>
-                        <span th:text="${best.moves} + ' moves'">31 moves</span>
                     </div>
                     <div class="level-card__status" th:if="${best == null}">
                         <span class="badge badge--new">NEW</span>

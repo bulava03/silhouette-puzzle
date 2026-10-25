@@ -1,0 +1,33 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-bests-are-attempts
+      author: silhouette-puzzle
+      comment: >
+        A player's best is now simply their best solved attempt, and moves, which the server
+        cannot verify, no longer count. Turns every old best (time, moves, solve time, solve
+        count) into an attempt: its start is the solve time minus the time taken. Drops moves
+        from open attempts too.
+      changes:
+        - runCommand:
+            command: |
+              {
+                "update": "players",
+                "updates": [ {
+                  "q": { "bests.moves": { "$exists": true } },
+                  "u": [ { "$set": { "bests": { "$map": {
+                    "input": "$bests",
+                    "as": "best",
+                    "in": {
+                      "levelId": "$$best.levelId",
+                      "startedAt": { "$subtract": [ "$$best.solvedAt", "$$best.timeMs" ] },
+                      "solvedAt": "$$best.solvedAt",
+                      "timeMs": "$$best.timeMs" } } } } } ],
+                  "multi": true } ]
+              }
+        - runCommand:
+            command: |
+              {
+                "update": "attempts",
+                "updates": [ { "q": { "moves": { "$exists": true } },
+                               "u": { "$unset": { "moves": "" } }, "multi": true } ]
+              }

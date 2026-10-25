@@ -1,6 +1,6 @@
-// The game: loads a level, lets the player drag, turn and flip its parts,
-// and sends the placements to the server, which decides whether the
-// picture is complete and keeps the time.
+// The game: lays out the level the page carries, lets the player drag, turn
+// and flip its parts, and sends the placements to the server, which decides
+// whether the picture is complete and, for a logged-in player, keeps the time.
 (function () {
     'use strict';
 
@@ -39,7 +39,7 @@
     };
 
     const game = {
-        level: null,     // the level as the API returns it
+        level: null,     // silhouette and pieces, as the page carries them
         layout: null,    // board size, silhouette offset, tray
         pieces: [],      // per part: { x, y, r, f } in board coordinates
         nodes: [],       // per part: its <g> element
@@ -153,7 +153,7 @@
         [ui.rotateLeft, ui.rotateRight, ui.flipHorizontal, ui.flipVertical].forEach((button) => {
             button.disabled = piece === null || game.solved;
         });
-        ui.check.disabled = game.solved || game.busy || game.attemptId === null;
+        ui.check.disabled = game.solved || game.busy;
         ui.moves.textContent = game.moves;
         board.classList.toggle('is-solved', game.solved);
     }
@@ -279,48 +279,19 @@
         });
     }
 
-    async function start() {
-        clearInterval(game.timer);
-        hideResults();
+    // The page started a timed attempt for a logged-in player; starting over
+    // means a fresh page and so a fresh attempt.
+    function start() {
         game.pieces = game.layout.start.map((p) => ({ ...p }));
-        game.selected = null;
-        game.drag = null;
-        game.moves = 0;
-        game.solved = false;
-        game.attemptId = null;
-        game.edge.setAccent(root.dataset.accent);
+        game.startedAt = Date.now();
+        game.timer = setInterval(() => {
+            ui.clock.textContent = clock(Date.now() - game.startedAt);
+        }, 500);
         render();
-        try {
-            const attempt = await api('POST', '/api/levels/' + encodeURIComponent(root.dataset.level) + '/attempts');
-            game.attemptId = attempt.id;
-            game.startedAt = Date.now();
-            ui.clock.textContent = '00:00';
-            game.timer = setInterval(() => {
-                ui.clock.textContent = clock(Date.now() - game.startedAt);
-            }, 500);
-        } catch (error) {
-            showError('Could not start the level: ' + error.message);
-        }
-        render();
-    }
-
-    async function rankNote() {
-        const me = root.dataset.me;
-        if (!me) {
-            ui.solvedNote.replaceChildren('Log in to put your times on the leaderboard.');
-            return;
-        }
-        try {
-            const ranking = await api('GET', '/api/levels/' + encodeURIComponent(root.dataset.level) + '/leaderboard?limit=100');
-            const mine = ranking.find((entry) => entry.username === me);
-            ui.solvedNote.textContent = mine ? 'Your best puts you #' + mine.rank + ' on the leaderboard.' : '';
-        } catch (error) {
-            ui.solvedNote.textContent = '';
-        }
     }
 
     async function check() {
-        if (game.attemptId === null || game.solved) return;
+        if (game.solved || game.busy) return;
         game.busy = true;
         game.selected = null;
         render();
@@ -328,20 +299,24 @@
             x: p.x - game.layout.offset.x, y: p.y - game.layout.offset.y, rotation: p.r, flipped: p.f
         }));
         try {
-            const result = await api('POST', '/api/attempts/' + encodeURIComponent(game.attemptId) + '/submit',
-                { placements, moves: game.moves });
+            const result = await api('POST', '/api/levels/' + encodeURIComponent(root.dataset.level) + '/check',
+                { attemptId: game.attemptId, placements });
             hideResults();
             if (result.solved) {
                 game.solved = true;
                 clearInterval(game.timer);
-                ui.clock.textContent = clock(result.timeMs);
-                ui.solvedTime.textContent = clock(result.timeMs);
-                ui.solvedMoves.textContent = result.moves;
+                // A player's time comes from the server; a guest only has the page's clock.
+                const time = clock(result.timeMs ?? Date.now() - game.startedAt);
+                ui.clock.textContent = time;
+                ui.solvedTime.textContent = time;
+                ui.solvedMoves.textContent = game.moves;
+                if (result.rank) {
+                    ui.solvedNote.textContent = 'Your best puts you #' + result.rank + ' on the leaderboard.';
+                }
                 game.edge.setAccent('#80DBA2');
                 ui.solved.hidden = false;
-                rankNote();
             } else {
-                const off = Math.max(1, Math.round((result.overlapRatio + result.mismatchRatio) * 100));
+                const off = Math.max(1, Math.round(result.off * 100));
                 ui.missedText.textContent = off + '% of the silhouette is off. Keep going.';
                 ui.missed.hidden = false;
             }
@@ -361,13 +336,9 @@
         }
     }
 
-    async function init() {
-        try {
-            game.level = await api('GET', '/api/levels/' + encodeURIComponent(root.dataset.level));
-        } catch (error) {
-            showError('Could not load the level: ' + error.message);
-            return;
-        }
+    function init() {
+        game.level = JSON.parse(root.dataset.shapes);
+        game.attemptId = root.dataset.attempt || null;
         game.layout = layOut(game.level);
         ui.parts.textContent = game.level.pieces.length;
         build();
@@ -387,9 +358,9 @@
         ui.flipHorizontal.addEventListener('click', () => turn((p) => ({ r: (360 - p.r) % 360, f: !p.f })));
         ui.flipVertical.addEventListener('click', () => turn((p) => ({ r: (540 - p.r) % 360, f: !p.f })));
         ui.check.addEventListener('click', check);
-        ui.restart.addEventListener('click', start);
-        ui.startAgain.addEventListener('click', start);
-        await start();
+        ui.restart.addEventListener('click', () => window.location.reload());
+        ui.startAgain.addEventListener('click', () => window.location.reload());
+        start();
     }
 
     init();
