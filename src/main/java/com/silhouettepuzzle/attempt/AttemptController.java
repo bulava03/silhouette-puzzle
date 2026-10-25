@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.silhouettepuzzle.player.PlayerPrincipal;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -22,6 +25,7 @@ import jakarta.validation.constraints.Min;
  * Starting attempts, submitting solutions and level leaderboards.
  */
 @RestController
+@Tag(name = "Attempts", description = "Timed attempts, solution checking and leaderboards")
 public class AttemptController {
 
     /** Most entries a leaderboard request may ask for. */
@@ -49,7 +53,11 @@ public class AttemptController {
      * @return 201 with the attempt
      */
     @PostMapping("/api/levels/{levelId}/attempts")
+    @Operation(summary = "Start a timed attempt",
+            description = "The server records the start time. Attempts of logged-in players count for "
+                    + "leaderboards; anonymous attempts can be played but are not ranked.")
     public ResponseEntity<StartedAttempt> start(@PathVariable String levelId,
+                                                @Parameter(hidden = true)
                                                 @AuthenticationPrincipal PlayerPrincipal player) {
         Attempt attempt = attempts.start(levelId, player);
         return ResponseEntity.created(URI.create("/api/attempts/" + attempt.id())).body(StartedAttempt.of(attempt));
@@ -64,7 +72,13 @@ public class AttemptController {
      * @return the verdict
      */
     @PostMapping("/api/attempts/{attemptId}/submit")
-    public SubmitResult submit(@PathVariable String attemptId, @AuthenticationPrincipal PlayerPrincipal player,
+    @Operation(summary = "Submit a solution",
+            description = "One placement per level piece, in level order: position of the piece origin, "
+                    + "rotation clockwise in 45-degree steps, and whether the piece is mirrored. "
+                    + "Accepted when overlap and mismatch both stay within the tolerance; "
+                    + "a rejected submission keeps the attempt open.")
+    public SubmitResult submit(@PathVariable String attemptId,
+                               @Parameter(hidden = true) @AuthenticationPrincipal PlayerPrincipal player,
                                @Valid @RequestBody SubmitRequest request) {
         return attempts.submit(attemptId, player, request.placements(), request.moves());
     }
@@ -77,6 +91,8 @@ public class AttemptController {
      * @return leaderboard entries, best first
      */
     @GetMapping("/api/levels/{levelId}/leaderboard")
+    @Operation(summary = "Get a level leaderboard",
+            description = "Best run of each player, ranked by time, then moves, then who solved first.")
     public List<LeaderboardEntry> leaderboard(@PathVariable String levelId,
                                               @RequestParam(defaultValue = "10") @Min(1) @Max(MAX_LEADERBOARD)
                                               int limit) {

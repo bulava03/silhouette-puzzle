@@ -12,7 +12,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.silhouettepuzzle.attempt.LeaderboardService;
 import com.silhouettepuzzle.attempt.ProgressEntry;
+import com.silhouettepuzzle.config.OpenApiConfig;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 /**
@@ -20,6 +25,7 @@ import jakarta.validation.Valid;
  * by Spring Security at {@code /login} and {@code /logout}.
  */
 @RestController
+@Tag(name = "Players", description = "Registration and the logged-in player")
 public class PlayerController {
 
     private final PlayerService players;
@@ -43,6 +49,8 @@ public class PlayerController {
      * @return 201 with the new player
      */
     @PostMapping("/api/players")
+    @Operation(summary = "Register", description = "Usernames are unique regardless of case. "
+            + "Log in afterwards through POST /login.")
     public ResponseEntity<PlayerView> register(@Valid @RequestBody RegisterRequest request) {
         Player player = players.register(request);
         return ResponseEntity.created(URI.create("/api/players/" + player.id()))
@@ -56,7 +64,8 @@ public class PlayerController {
      * @return the player
      */
     @GetMapping("/api/me")
-    public PlayerView me(@AuthenticationPrincipal PlayerPrincipal me) {
+    @Operation(summary = "Get the logged-in player", security = @SecurityRequirement(name = OpenApiConfig.SESSION))
+    public PlayerView me(@Parameter(hidden = true) @AuthenticationPrincipal PlayerPrincipal me) {
         return new PlayerView(me.getId(), me.getUsername());
     }
 
@@ -67,7 +76,9 @@ public class PlayerController {
      * @return progress per level
      */
     @GetMapping("/api/me/progress")
-    public List<ProgressEntry> progress(@AuthenticationPrincipal PlayerPrincipal me) {
+    @Operation(summary = "Get personal bests per solved level",
+            security = @SecurityRequirement(name = OpenApiConfig.SESSION))
+    public List<ProgressEntry> progress(@Parameter(hidden = true) @AuthenticationPrincipal PlayerPrincipal me) {
         return leaderboards.progressOf(me.getId());
     }
 }

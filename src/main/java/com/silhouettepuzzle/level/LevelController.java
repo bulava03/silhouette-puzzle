@@ -7,11 +7,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * Read-only access to levels.
  */
 @RestController
 @RequestMapping("/api/levels")
+@Tag(name = "Levels", description = "Puzzle levels")
 public class LevelController {
 
     private final LevelRepository levels;
@@ -31,6 +35,7 @@ public class LevelController {
      * @return level summaries
      */
     @GetMapping
+    @Operation(summary = "List levels in play order")
     public List<LevelSummary> list() {
         return levels.findAllByOrderByNumberAsc();
     }
@@ -42,6 +47,9 @@ public class LevelController {
      * @return the level without its reference solution
      */
     @GetMapping("/{id}")
+    @Operation(summary = "Get a level to play",
+            description = "Silhouette in board coordinates and pieces in their own coordinates. "
+                    + "The reference solution is never included.")
     public LevelView get(@PathVariable String id) {
         return levels.findById(id).map(LevelView::of).orElseThrow(() -> new LevelNotFoundException(id));
     }

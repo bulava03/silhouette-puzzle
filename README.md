@@ -17,9 +17,9 @@ with a proper backend.
 
 ## Tech stack
 
-Java 21 · Spring Boot 4 (Web MVC, Validation) · MongoDB 7 ·
+Java 21 · Spring Boot 4 (Web MVC, Security, Validation) · MongoDB 7 ·
 Spring Data MongoDB · JTS (Java Topology Suite) · JUnit 5 ·
-Testcontainers · Checkstyle · GitHub Actions · Docker
+Testcontainers · springdoc-openapi · Checkstyle · GitHub Actions · Docker
 
 ## Levels
 
@@ -32,6 +32,10 @@ level is therefore solvable by construction. The reference solution stays on
 the server and is never sent to clients.
 
 ## API
+
+Interactive documentation is served by the running application at
+http://localhost:8080/swagger-ui.html, and the OpenAPI document at
+http://localhost:8080/v3/api-docs.
 
 | Method | Path                           | Description                            |
 |--------|--------------------------------|----------------------------------------|
