@@ -13,10 +13,8 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 
-import com.silhouettepuzzle.IntegrationTestConfig;
+import com.silhouettepuzzle.IntegrationTest;
 import com.silhouettepuzzle.entity.Attempt;
 import com.silhouettepuzzle.entity.Player;
 import com.silhouettepuzzle.repository.PlayerRepository;
@@ -24,8 +22,7 @@ import com.silhouettepuzzle.repository.PlayerRepository;
 /**
  * Players' bests and the leaderboards built from them, against a real MongoDB.
  */
-@SpringBootTest
-@Import(IntegrationTestConfig.class)
+@IntegrationTest
 class PlayerServiceTest {
 
     private static final Instant AT = Instant.parse("2026-01-01T12:00:00Z");

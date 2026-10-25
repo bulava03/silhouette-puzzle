@@ -14,21 +14,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.mongodb.autoconfigure.MongoConnectionDetails;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Updates;
-import com.silhouettepuzzle.IntegrationTestConfig;
+import com.silhouettepuzzle.IntegrationTest;
 
 /**
  * The Liquibase changelog, run on a database holding data in the old shape.
  */
-@SpringBootTest
-@Import(IntegrationTestConfig.class)
+@IntegrationTest
 class DatabaseMigrationsTest {
 
     private static final Date T1 = Date.from(Instant.parse("2026-10-20T10:00:00Z"));

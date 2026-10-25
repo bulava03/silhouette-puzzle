@@ -18,12 +18,10 @@ import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.silhouettepuzzle.IntegrationTest;
 import com.silhouettepuzzle.IntegrationTestConfig;
 import com.silhouettepuzzle.dto.SubmitRequest;
 import com.silhouettepuzzle.repository.PlayerRepository;
@@ -34,9 +32,7 @@ import com.silhouettepuzzle.service.LevelService;
 /**
  * The HTML pages, rendered against a real MongoDB.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(IntegrationTestConfig.class)
+@IntegrationTest
 class PageFlowTest {
 
     @Autowired

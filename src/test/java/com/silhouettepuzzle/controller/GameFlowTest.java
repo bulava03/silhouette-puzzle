@@ -22,14 +22,12 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import com.silhouettepuzzle.ApiException;
+import com.silhouettepuzzle.IntegrationTest;
 import com.silhouettepuzzle.IntegrationTestConfig;
 import com.silhouettepuzzle.dto.SubmitRequest;
 import com.silhouettepuzzle.entity.Level;
@@ -45,9 +43,7 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Checking pictures over HTTP, as guests and as logged-in players, against a real MongoDB.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(IntegrationTestConfig.class)
+@IntegrationTest
 class GameFlowTest {
 
     @Autowired
