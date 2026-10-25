@@ -2,7 +2,7 @@
         "https://checkstyle.org/dtds/configuration_1_3.dtd">
 <module name="Checker">
     <module name="TreeWalker">
-        <!-- Every type says what it is for; methods get comments where they are not obvious. -->
+        <!-- Checks that the descriptions types have are well formed; it does not require one. -->
         <module name="JavadocType">
             <property name="allowMissingParamTags" value="true"/>
         </module>

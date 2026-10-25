@@ -316,7 +316,8 @@
                 game.edge.setAccent('#80DBA2');
                 ui.solved.hidden = false;
             } else {
-                const off = Math.max(1, Math.round(result.off * 100));
+                // Parts lying outside count as well as gaps, so the server's figure can pass 1.
+                const off = Math.min(100, Math.max(1, Math.round(result.off * 100)));
                 ui.missedText.textContent = off + '% of the silhouette is off. Keep going.';
                 ui.missed.hidden = false;
             }
