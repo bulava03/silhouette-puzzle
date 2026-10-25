@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Leaderboard')}"></head>
+<body>
+<header th:replace="~{fragments :: header('leaderboard')}"></header>
+
+<main class="main">
+    <div class="intro__text">
+        <span class="eyebrow eyebrow--amber">Hall of fame</span>
+        <h1 class="title title--page">Fastest builders</h1>
+        <p class="lead">Each player's best run. Faster time wins; on a tie, fewer moves; then whoever got there first.</p>
+    </div>
+
+    <nav class="tabs" aria-label="Levels">
+        <a class="tab" th:each="tab : ${tabs}" th:href="@{/leaderboard(level=${tab.id})}" th:text="${tab.label}"
+           th:style="'--accent: ' + ${tab.accent}"
+           th:attr="aria-current=${tab.current} ? 'page' : null">01 Bus</a>
+    </nav>
+
+    <div class="podium" th:unless="${#lists.isEmpty(podium)}">
+        <div class="card podium__spot" th:each="spot : ${podium}" th:classappend="'podium__spot--' + ${spot.rank}">
+            <span class="podium__rank" th:text="'#' + ${spot.rank}">#1</span>
+            <span class="podium__name" th:text="${spot.username}">mira</span>
+            <span class="podium__run"><th:block th:text="${spot.time}">00:52</th:block> <span th:text="'· ' + ${spot.moves} + ' moves'">· 21 moves</span></span>
+        </div>
+    </div>
+
+    <div class="card table-box">
+        <table class="results" th:unless="${#lists.isEmpty(rows)}">
+            <caption class="visually-hidden" th:text="${level.name} + ' leaderboard'">Bus leaderboard</caption>
+            <thead>
+            <tr>
+                <th scope="col">Rank</th>
+                <th scope="col">Player</th>
+                <th scope="col">Time</th>
+                <th scope="col">Moves</th>
+                <th scope="col">Built</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${rows}" th:classappend="${row.me} ? 'is-me'">
+                <td class="rank" th:text="${row.rank}">1</td>
+                <td><strong th:text="${row.username}">mira</strong><span class="you" th:if="${row.me}"> (you)</span></td>
+                <td class="mono" th:text="${row.time}">00:52</td>
+                <td class="mono" th:text="${row.moves}">21</td>
+                <td th:text="${row.date}">24 Oct</td>
+            </tr>
+            </tbody>
+        </table>
+        <p class="empty" th:if="${#lists.isEmpty(rows)}">
+            Nobody has built this picture yet. <a th:href="@{/play/{id}(id=${level.id})}">Be the first</a>.
+        </p>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${register} ? 'Register' : 'Log in')}"></head>
+<body>
+<header th:replace="~{fragments :: header('login')}"></header>
+
+<main class="auth">
+    <section class="card auth__card" th:attr="aria-label=${register} ? 'Create an account' : 'Log in'">
+        <nav class="modes" aria-label="Mode">
+            <a class="mode" th:href="@{/login}" th:attr="aria-current=${!register} ? 'page' : null">Log in</a>
+            <a class="mode" th:href="@{/login(mode='register')}" th:attr="aria-current=${register} ? 'page' : null">Register</a>
+        </nav>
+
+        <th:block th:unless="${register}">
+            <div class="auth__heading">
+                <h1 class="title">Welcome back</h1>
+                <p class="auth__lead">Log in to keep your times and progress.</p>
+            </div>
+            <p class="alert" role="alert" th:if="${param.error != null}">Wrong username or password.</p>
+            <form class="form" th:action="@{/login}" method="post">
+                <div class="field">
+                    <label for="login-username">Username</label>
+                    <input id="login-username" name="username" autocomplete="username" required>
+                </div>
+                <div class="field">
+                    <label for="login-password">Password</label>
+                    <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+                </div>
+                <button class="button button--cyan check" type="submit">Log in</button>
+            </form>
+        </th:block>
+
+        <th:block th:if="${register}">
+            <div class="auth__heading">
+                <h1 class="title">Create an account</h1>
+                <p class="auth__lead">Pick a name for the leaderboard.</p>
+            </div>
+            <p class="alert" role="alert" th:if="${formError != null}" th:text="${formError}">Username is taken.</p>
+            <form class="form" th:action="@{/register}" th:object="${form}" method="post" novalidate>
+                <div class="field">
+                    <label for="register-username">Username</label>
+                    <input id="register-username" th:field="*{username}" autocomplete="username" required
+                           th:attr="aria-invalid=${#fields.hasErrors('username')} ? 'true' : null">
+                    <span class="field__error" th:if="${#fields.hasErrors('username')}" th:errors="*{username}">error</span>
+                    <span class="field__hint" th:unless="${#fields.hasErrors('username')}">3–20 Latin letters, digits or underscores</span>
+                </div>
+                <div class="field">
+                    <label for="register-password">Password</label>
+                    <input id="register-password" name="password" type="password" autocomplete="new-password" required
+                           th:attr="aria-invalid=${#fields.hasErrors('password')} ? 'true' : null">
+                    <span class="field__error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}">error</span>
+                    <span class="field__hint" th:unless="${#fields.hasErrors('password')}">At least 8 characters</span>
+                </div>
+                <button class="button button--cyan check" type="submit">Register</button>
+            </form>
+        </th:block>
+
+        <p class="auth__note">No account needed to play.
+            <a th:href="@{/}">Play as a guest</a>; your times only count once you log in.</p>
+    </section>
+
+    <section class="auth__art" th:if="${art != null}" aria-label="A built picture">
+        <svg th:attr="viewBox=${art.viewBox},aria-label='A ' + ${#strings.toLowerCase(art.name)} + ' built from its parts'" role="img">
+            <polygon th:each="part : ${art.parts}" th:attr="points=${part.points},fill=${part.color},stroke=${part.color}"
+                     fill-opacity="0.5" stroke-width="0.04" stroke-linejoin="round"></polygon>
+        </svg>
+        <p class="auth__caption" th:text="'Level 01 · ' + ${art.name} + ' · built'">Level 01 · Bus · built</p>
+    </section>
+</main>
+</body>
+</html>

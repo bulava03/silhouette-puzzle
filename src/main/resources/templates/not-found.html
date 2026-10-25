@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Not found')}"></head>
+<body>
+<header th:replace="~{fragments :: header('none')}"></header>
+
+<main class="main">
+    <div class="intro__text">
+        <span class="eyebrow eyebrow--pink">404</span>
+        <h1 class="title title--page">Nothing in this void</h1>
+        <p class="lead">There is no such picture. <a th:href="@{/}">Back to the levels</a>.</p>
+    </div>
+</main>
+</body>
+</html>

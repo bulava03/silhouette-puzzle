@@ -20,8 +20,26 @@ with a proper backend.
 ## Tech stack
 
 Java 21 · Spring Boot 4 (Web MVC, Security, Validation) · MongoDB 7 ·
-Spring Data MongoDB · JTS (Java Topology Suite) · JUnit 5 ·
-Testcontainers · springdoc-openapi · Checkstyle · GitHub Actions · Docker
+Spring Data MongoDB · JTS (Java Topology Suite) · Thymeleaf · SVG and
+vanilla JavaScript · JUnit 5 · Testcontainers · springdoc-openapi ·
+Checkstyle · GitHub Actions · Docker
+
+## Pages
+
+| Path                  | Page                                                         |
+|-----------------------|--------------------------------------------------------------|
+| `/`                   | Every picture, with the player's best time and moves         |
+| `/play/{id}`          | The game                                                     |
+| `/leaderboard`        | Podium and table of best runs per picture (`?level=`)        |
+| `/login`              | Log in or register (`?mode=register`)                        |
+
+Levels, leaderboards and the login page are rendered on the server with
+Thymeleaf. The game page is an SVG board driven by a small script with no
+build step: it loads the level from the API, lets the player drag, turn and
+flip the parts with corners snapping together, and sends the placements to
+the server, which decides whether the picture is complete and keeps the time.
+Fonts are served by the application itself, so pages load nothing from
+other sites.
 
 ## Levels
 

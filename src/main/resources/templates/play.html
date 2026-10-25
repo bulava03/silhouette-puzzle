@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${level.name})}"></head>
+<body>
+<header th:replace="~{fragments :: header('play')}"></header>
+
+<!-- Reading the CSRF token makes the server set the XSRF-TOKEN cookie the game script sends back. -->
+<main class="game" id="game"
+      th:data-csrf="${_csrf.token != null}"
+      th:data-level="${level.id}"
+      th:data-accent="${accent}"
+      th:data-next="@{/play/{id}(id=${nextId})}"
+      th:data-me="${me != null} ? ${me.username} : ''">
+    <section class="game__board" aria-label="Board">
+        <nav class="tabs" aria-label="Levels">
+            <a class="tab" th:each="tab : ${tabs}" th:href="@{/play/{id}(id=${tab.id})}" th:text="${tab.label}"
+               th:style="'--accent: ' + ${tab.accent}"
+               th:attr="aria-current=${tab.current} ? 'page' : null">01 Bus</a>
+        </nav>
+        <div class="board card" id="board">
+            <svg id="board-svg" role="img" th:attr="aria-label=${level.name} + ' silhouette and its parts'"></svg>
+        </div>
+        <p class="hint">Drag the parts onto the silhouette. Some lie turned or mirrored: select one to turn or flip it.
+            Corners snap together when they come close.</p>
+    </section>
+
+    <aside class="game__side" aria-label="Status and controls">
+        <div class="card panel">
+            <span class="panel__eyebrow"><th:block th:text="'Level ' + ${#numbers.formatInteger(level.number, 2)}">Level 01</th:block> · <span id="part-count">0</span> parts</span>
+            <h1 class="title" th:text="${level.name}">Bus</h1>
+            <div class="meters">
+                <div class="meter">
+                    <span class="meter__label">Time</span>
+                    <span class="meter__value meter__value--time" id="clock" role="timer" aria-live="off">00:00</span>
+                </div>
+                <div class="meter">
+                    <span class="meter__label">Moves</span>
+                    <span class="meter__value meter__value--moves" id="moves">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card panel">
+            <div class="selection" aria-live="polite">
+                <span class="selection__swatch" id="selection-swatch"></span>
+                <span id="selection-name">Select a part</span>
+            </div>
+            <div class="tools">
+                <button class="tool" type="button" id="rotate-left" aria-label="Turn 45° counter-clockwise" disabled>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"></path><polyline points="3 3 3 9 9 9"></polyline></svg>
+                </button>
+                <button class="tool" type="button" id="rotate-right" aria-label="Turn 45° clockwise" disabled>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"></path><polyline points="21 3 21 9 15 9"></polyline></svg>
+                </button>
+                <button class="tool" type="button" id="flip-horizontal" aria-label="Flip left to right" disabled>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="3" x2="12" y2="21" stroke-dasharray="2 2"></line><polygon points="9 7 3 17 9 17"></polygon><polygon points="15 7 21 17 15 17"></polygon></svg>
+                </button>
+                <button class="tool" type="button" id="flip-vertical" aria-label="Flip top to bottom" disabled>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12" stroke-dasharray="2 2"></line><polygon points="7 9 17 3 17 9"></polygon><polygon points="7 15 17 21 17 15"></polygon></svg>
+                </button>
+            </div>
+            <button class="button button--pink check" type="button" id="check" disabled>Check picture</button>
+            <button class="button button--ghost" type="button" id="restart">Restart level</button>
+        </div>
+
+        <div class="result result--solved" id="result-solved" role="status" hidden>
+            <span class="result__title">Picture complete!</span>
+            <span>Built in <strong class="mono" id="solved-time">00:00</strong> with <strong class="mono" id="solved-moves">0</strong> moves.</span>
+            <span class="result__note" id="solved-note"></span>
+            <div class="result__actions">
+                <a class="button button--green" th:href="@{/play/{id}(id=${nextId})}">Next picture</a>
+                <a th:href="@{/leaderboard(level=${level.id})}">Leaderboard →</a>
+            </div>
+        </div>
+        <div class="result result--missed" id="result-missed" role="status" hidden>
+            <span class="result__title">Not quite</span>
+            <span id="missed-text"></span>
+        </div>
+        <div class="result result--error" id="result-error" role="alert" hidden>
+            <span class="result__title">Something went wrong</span>
+            <span id="error-text"></span>
+        </div>
+    </aside>
+</main>
+
+<script th:src="@{/js/void.js}"></script>
+<script th:src="@{/js/game.js}"></script>
+</body>
+</html>
