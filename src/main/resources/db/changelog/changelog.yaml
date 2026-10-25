@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/001-player-indexes.yaml
+  - include:
+      file: db/changelog/002-move-results-into-players.yaml
+  - include:
+      file: db/changelog/003-expire-old-attempts.yaml

@@ -1,0 +1,13 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-expire-old-attempts
+      author: silhouette-puzzle
+      comment: >
+        Attempts only hold the server-side start time. MongoDB removes them two days after
+        they start; app.attempts.lifetime lets them be submitted for one. This comes after
+        002 so no attempt expires before its result has moved into the player.
+      changes:
+        - createIndex:
+            collectionName: attempts
+            keys: '{ "startedAt": 1 }'
+            options: '{ "name": "attempt-expiry", "expireAfterSeconds": 172800 }'

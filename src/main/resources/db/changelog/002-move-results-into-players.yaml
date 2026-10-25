@@ -1,0 +1,55 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-move-results-into-players
+      author: silhouette-puzzle
+      comment: >
+        Results used to be read from solved attempts; now each player keeps a best run per
+        level in bests. Moves the best run and the solve count of every player and level
+        from the attempts into the players. Players that already have bests keep them.
+      changes:
+        - runCommand:
+            command: |
+              {
+                "aggregate": "attempts",
+                "cursor": {},
+                "pipeline": [
+                  { "$match": { "playerId": { "$ne": null }, "solvedAt": { "$ne": null } } },
+                  { "$sort": { "timeMs": 1, "moves": 1, "solvedAt": 1 } },
+                  { "$group": {
+                      "_id": { "player": "$playerId", "level": "$levelId" },
+                      "timeMs": { "$first": "$timeMs" },
+                      "moves": { "$first": "$moves" },
+                      "solvedAt": { "$first": "$solvedAt" },
+                      "solves": { "$sum": 1 } } },
+                  { "$group": {
+                      "_id": { "$toObjectId": "$_id.player" },
+                      "bests": { "$push": {
+                          "levelId": "$_id.level", "timeMs": "$timeMs", "moves": "$moves",
+                          "solvedAt": "$solvedAt", "solves": "$solves" } } } },
+                  { "$merge": {
+                      "into": "players",
+                      "on": "_id",
+                      "whenMatched": [ { "$set": { "bests": { "$cond": [
+                          { "$gt": [ { "$size": { "$ifNull": [ "$bests", [] ] } }, 0 ] },
+                          "$bests", "$$new.bests" ] } } } ],
+                      "whenNotMatched": "discard" } }
+                ]
+              }
+        - runCommand:
+            command: |
+              {
+                "update": "attempts",
+                "updates": [ { "q": { "username": { "$exists": true } },
+                               "u": { "$unset": { "username": "" } }, "multi": true } ]
+              }
+
+  - changeSet:
+      id: 002-drop-attempt-indexes
+      author: silhouette-puzzle
+      comment: >
+        Drops the indexes the attempt-based results needed. A new database has no attempts
+        collection to drop them from, which is fine, hence failOnError false.
+      failOnError: false
+      changes:
+        - runCommand:
+            command: '{ "dropIndexes": "attempts", "index": "*" }'

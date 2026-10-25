@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-player-indexes
+      author: silhouette-puzzle
+      comment: >
+        Unique lower-cased usernames, and bests.levelId for leaderboards. The names are the
+        ones Spring Data created before, so databases that already have them are unaffected.
+      changes:
+        - createIndex:
+            collectionName: players
+            keys: '{ "usernameKey": 1 }'
+            options: '{ "name": "usernameKey", "unique": true }'
+        - createIndex:
+            collectionName: players
+            keys: '{ "bests.levelId": 1 }'
+            options: '{ "name": "bests-level" }'

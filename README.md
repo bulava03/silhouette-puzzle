@@ -20,7 +20,7 @@ with a proper backend.
 ## Tech stack
 
 Java 21 · Spring Boot 4 (Web MVC, Security, Validation) · MongoDB 7 ·
-Spring Data MongoDB · JTS (Java Topology Suite) · Thymeleaf · SVG and
+Spring Data MongoDB · Liquibase · JTS (Java Topology Suite) · Thymeleaf · SVG and
 vanilla JavaScript · JUnit 5 · Testcontainers · springdoc-openapi ·
 Checkstyle · GitHub Actions · Docker
 
@@ -144,6 +144,26 @@ Attempts exist because the server, not the client, keeps the time: an
 attempt holds its start until it is solved or abandoned. They are temporary,
 and a TTL index removes them two days after they start. If a level were ever
 retired, one `$pull` would remove it from every player's bests.
+
+### Migrations
+
+MongoDB has no schema to create, but indexes and changes to the shape of
+stored data still need to be versioned. They are a Liquibase changelog in
+[`src/main/resources/db/changelog`](src/main/resources/db/changelog), using
+the MongoDB extension: `createIndex` for indexes and `runCommand` for any
+MongoDB command. On startup, before the application serves anything, the
+change sets not yet applied run in order. Liquibase records them with
+checksums in `DATABASECHANGELOG`, refuses to start if an applied change set
+was edited, and holds a lock in `DATABASECHANGELOGLOCK` so several instances
+starting at once apply each change once. Spring Boot's Liquibase support
+needs a JDBC data source, so a small runner (`DatabaseMigrations`) starts it
+for MongoDB; Liquibase's anonymous usage reporting is switched off.
+
+| Change set | What it does |
+|------------|--------------|
+| `001-player-indexes` | unique lower-cased usernames, `bests.levelId` for leaderboards |
+| `002-move-results-into-players` | moves results from solved attempts into the players' `bests` (an aggregation with `$merge`), drops the indexes and fields the old attempt-based model used |
+| `003-expire-old-attempts` | TTL index on attempts; only after 002, so no attempt expires before its result has moved |
 
 ## Getting started
 

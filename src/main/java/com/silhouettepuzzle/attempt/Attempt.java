@@ -10,7 +10,8 @@ import com.silhouettepuzzle.player.PlayerPrincipal;
 /**
  * One try at a level, timed by the server. Attempts are temporary: a solved
  * one hands its result to the player's bests, and MongoDB removes every
- * attempt some time after it started. Anonymous attempts have no player.
+ * attempt two days after it started (a TTL index, see {@code db/changelog}).
+ * Anonymous attempts have no player.
  */
 @Document("attempts")
 public record Attempt(
