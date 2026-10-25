@@ -17,8 +17,28 @@ with a proper backend.
 
 ## Tech stack
 
-Java 21 · Spring Boot 4 (Web MVC, Validation) · MongoDB 8 ·
-Spring Data MongoDB · JTS (Java Topology Suite) · JUnit 5 · Checkstyle · GitHub Actions · Docker
+Java 21 · Spring Boot 4 (Web MVC, Validation) · MongoDB 7 ·
+Spring Data MongoDB · JTS (Java Topology Suite) · JUnit 5 ·
+Testcontainers · Checkstyle · GitHub Actions · Docker
+
+## Levels
+
+Built-in levels live in
+[`src/main/resources/levels/tangram.json`](src/main/resources/levels/tangram.json)
+and are stored in MongoDB on startup. A level does not spell out its
+silhouette: it gives a reference placement of the pieces, and the server
+unites them into the silhouette with JTS, rejecting overlaps and holes. Every
+level is therefore solvable by construction. The reference solution stays on
+the server and is never sent to clients.
+
+## API
+
+| Method | Path               | Description                              |
+|--------|--------------------|------------------------------------------|
+| GET    | `/api/levels`      | Levels in play order                     |
+| GET    | `/api/levels/{id}` | Silhouette and pieces of one level       |
+
+Errors are returned as RFC 9457 problem details.
 
 ## Getting started
 
