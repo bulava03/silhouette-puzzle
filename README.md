@@ -18,7 +18,7 @@ with a proper backend.
 ## Tech stack
 
 Java 21 · Spring Boot 4 (Web MVC, Validation) · MongoDB 8 ·
-Spring Data MongoDB · Checkstyle · GitHub Actions · Docker
+Spring Data MongoDB · JTS (Java Topology Suite) · JUnit 5 · Checkstyle · GitHub Actions · Docker
 
 ## Getting started
 
