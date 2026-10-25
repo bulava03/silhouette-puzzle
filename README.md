@@ -9,14 +9,6 @@ record is measured by the server, so records cannot be faked from the client.
 
 > Work in progress. The sections below grow together with the project.
 
-## Background
-
-The project started as a school assignment in 8th grade: a "constructor" in
-Pascal where coloured shapes were dragged across the screen to build a
-picture. Later it was rewritten in Java Swing; that version is kept as is in
-[`legacy/`](legacy/). This repository turns the idea into a web application
-with a proper backend.
-
 ## Tech stack
 
 Java 21 · Spring Boot 4 (Web MVC, Security, Validation) · MongoDB 7 ·
@@ -97,8 +89,7 @@ server derives what the game needs:
 - the silhouette, the union of the placed parts built with JTS, which rejects
   overlapping parts and holes.
 
-Every level is therefore solvable by construction. The first picture, the
-bus, is built from the parts of the original Java version.
+Every level is therefore solvable by construction.
 
 A picture counts when the overlap between parts and the difference from the
 silhouette both stay within 1% of the silhouette area.

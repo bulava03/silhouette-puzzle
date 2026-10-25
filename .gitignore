@@ -17,7 +17,6 @@ target/
 .idea
 *.iws
 *.iml
-!legacy/*.iml
 *.ipr
 
 ### NetBeans ###

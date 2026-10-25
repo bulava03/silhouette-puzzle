@@ -2,5 +2,4 @@ target/
 .git/
 .idea/
 *.iml
-legacy/
 .mvn/wrapper/maven-wrapper.jar
