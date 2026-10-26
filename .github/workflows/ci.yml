@@ -43,8 +43,17 @@ jobs:
           cache: npm
           cache-dependency-path: e2e/package-lock.json
 
+      # The runner already has the system libraries Chromium needs (it ships
+      # Google Chrome), so only the browser is fetched, and it is cached per
+      # Playwright version: --with-deps would go through apt, which can hang.
+      - name: Cache the Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
+
       - name: Install Playwright
-        run: npm ci && npx playwright install --with-deps chromium
+        run: npm ci && npx playwright install chromium
 
       - name: Wait for the application
         run: timeout 180 bash -c 'until curl -sf http://localhost:8080/ > /dev/null; do sleep 3; done'

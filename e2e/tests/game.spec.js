@@ -52,7 +52,9 @@ test("a registered player builds a picture and sees it on the levels page and th
     await expect(page.getByText(/Your best puts you #\d+ on the leaderboard\./)).toBeVisible();
 
     await page.goto("/");
-    await expect(page.locator("article", { hasText: "House" }).getByText("BUILT")).toBeVisible();
+    // By the exact heading: "House" is also part of "Lighthouse".
+    const house = page.locator("article", { has: page.getByRole("heading", { name: "House", exact: true }) });
+    await expect(house.getByText("BUILT", { exact: true })).toBeVisible();
     await page.goto("/leaderboard?level=house");
     await expect(page.locator("tr.is-me")).toContainText(name);
 });
