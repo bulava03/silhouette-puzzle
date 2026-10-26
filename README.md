@@ -1,7 +1,7 @@
 # Silhouette Puzzle
 
-A picture-building puzzle game in the browser. Every level is a picture, a
-bus, a house or a rocket, cut into its own parts; the player drags, turns and
+A picture-building puzzle game in the browser. Every level is a picture,
+from a sailboat to a steam locomotive, cut into its own parts; the player drags, turns and
 flips the parts until they fill the picture's dark silhouette. The server
 does all the geometry and keeps the time, so a record on the leaderboard
 cannot be faked from the browser.
@@ -14,8 +14,9 @@ cannot be faked from the browser.
 
 ## Features
 
-- **Pictures with their own parts**: 18 for the bus, 10 each for the house
-  and the rocket, each part in the natural colour of the real thing.
+- **Nine pictures with their own parts**: a bus, a house, a rocket, a
+  sailboat, a cat, a lighthouse, a car, a castle and a locomotive, from 9 to
+  18 parts each, every part in the natural colour of the real thing.
 - **Playing** by dragging parts onto the silhouette, turning them in 45°
   steps and mirroring them left to right or top to bottom; corners snap
   together when they come close. Some parts start turned or mirrored.

@@ -25,9 +25,10 @@ class LevelServiceTest {
 
     @Test
     void readsThePictures() {
-        assertThat(levels).extracting(Level::id).containsExactly("bus", "house", "rocket");
-        assertThat(levels).extracting(Level::number).containsExactly(1, 2, 3);
-        assertThat(levels).extracting(level -> level.pieces().size()).containsExactly(18, 10, 10);
+        assertThat(levels).extracting(Level::id).containsExactly(
+                "bus", "house", "rocket", "sailboat", "cat", "lighthouse", "car", "castle", "locomotive");
+        assertThat(levels).extracting(Level::number).containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9);
+        assertThat(levels).extracting(level -> level.pieces().size()).containsExactly(18, 10, 10, 9, 12, 11, 13, 13, 15);
         assertThat(level("bus").pieces().get(16)).isEqualTo(new Piece("Wheel", "#737A8F",
                 level("bus").pieces().get(16).outline(), 45));
     }

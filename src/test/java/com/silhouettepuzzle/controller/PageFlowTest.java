@@ -78,7 +78,7 @@ class PageFlowTest {
         mvc.perform(get("/play/rocket"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(allOf(
-                        containsString("data-level=\"rocket\""), containsString("data-next=\"/play/bus\""),
+                        containsString("data-level=\"rocket\""), containsString("data-next=\"/play/sailboat\""),
                         containsString("data-shapes="), not(containsString("solution")), not(containsString("data-attempt")),
                         containsString("id=\"flip-vertical\""), containsString("/js/game.js"))));
         mvc.perform(get("/play/nope"))
