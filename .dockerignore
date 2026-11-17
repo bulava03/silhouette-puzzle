@@ -4,3 +4,4 @@ target/
 *.iml
 .mvn/wrapper/maven-wrapper.jar
 e2e/
+src/main/frontend/node_modules/

@@ -2,9 +2,9 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Cache dependencies separately from sources for faster rebuilds
+# Cache dependencies and Node separately from sources for faster rebuilds
 COPY pom.xml checkstyle.xml ./
-RUN mvn -q dependency:go-offline
+RUN mvn -q dependency:go-offline frontend:install-node-and-npm@install-node
 
 COPY src ./src
 RUN mvn -q package -DskipTests

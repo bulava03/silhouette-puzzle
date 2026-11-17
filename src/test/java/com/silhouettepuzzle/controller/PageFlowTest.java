@@ -80,7 +80,8 @@ class PageFlowTest {
                 .andExpect(content().string(allOf(
                         containsString("data-level=\"rocket\""), containsString("data-next=\"/play/sailboat\""),
                         containsString("data-shapes="), not(containsString("solution")), not(containsString("data-attempt")),
-                        containsString("id=\"flip-vertical\""), containsString("/js/game.js"))));
+                        containsString("data-guest=\"true\""), containsString("data-leaderboard=\"/leaderboard?level=rocket\""),
+                        containsString("id=\"game-side\""), containsString("type=\"module\" src=\"/js/game.js\""))));
         mvc.perform(get("/play/nope"))
                 .andExpect(status().isNotFound())
                 .andExpect(content().string(containsString("Nothing in this void")));

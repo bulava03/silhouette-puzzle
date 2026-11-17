@@ -36,3 +36,6 @@ build/
 /e2e/node_modules/
 /e2e/test-results/
 /e2e/playwright-report/
+
+### Frontend ###
+/src/main/frontend/node_modules/

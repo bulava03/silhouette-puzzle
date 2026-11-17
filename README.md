@@ -31,9 +31,9 @@ cannot be faked from the browser.
 ## Tech stack
 
 Java 21 · Spring Boot 4 (Web MVC, Security, Validation) · MongoDB 7 ·
-Spring Data MongoDB · Liquibase · JTS Topology Suite · Thymeleaf · SVG and
-vanilla JavaScript · JUnit 5 · Testcontainers · Playwright · Checkstyle ·
-GitHub Actions · Docker
+Spring Data MongoDB · Liquibase · JTS Topology Suite · Thymeleaf · React 19 ·
+TypeScript · Vite · SVG · JUnit 5 · Vitest · Testcontainers · Playwright ·
+Checkstyle · GitHub Actions · Docker
 
 ## Getting started
 
@@ -55,6 +55,9 @@ own MongoDB instead, start it on `localhost:27017` and run
 
 ## Architecture
 
+The server code lives in `src/main/java`, the browser code in
+[`src/main/frontend`](src/main/frontend):
+
 ```
 config/      game beans (geometry, clock) and the Liquibase runner
 security/    Spring Security setup and the logged-in player
@@ -64,10 +67,18 @@ repository/  Spring Data repositories
 service/     levels, players and their results, attempts and checking
 controller/  the pages and the one JSON endpoint
 geometry/    the puzzle geometry on JTS, free of Spring
+
+frontend/
+  types.ts     the level and the check, as the Java records send them
+  geometry.ts  the board's geometry: poses, the tray, snapping
+  void.ts      the starry silhouettes; levels.ts draws them on the levels page
+  game/        the game in React: state (a pure reducer), Board, Piece, Panels
 ```
 
-Every page is rendered on the server with Thymeleaf. The only script is the
-game board, an SVG with no build step. Its page carries just what it needs:
+Every page is rendered on the server with Thymeleaf. The game itself, the
+SVG board and the panel beside it, is a React island in TypeScript, mounted
+into the game page; Vite builds it into the jar's static resources as part of
+the Maven build, with Node fetched by the build itself. Its page carries just what it needs:
 the silhouette and the parts of the level, never the reference solution, and
 for a logged-in player the id of a timed attempt the server starts as it
 renders the page. The board makes a single call, `POST /api/levels/{id}/check`,
@@ -130,6 +141,9 @@ only by a better attempt.
 
 - **Unit tests** cover the geometry (placing, checking, building
   silhouettes, every rotation and invalid shape) and the level catalog.
+- **Frontend tests** (Vitest) cover the board's geometry and the rules of
+  play in the game's reducer: dragging, snapping, turning, flipping, moves
+  and every verdict.
 - **Integration tests** run against MongoDB in Testcontainers: the picture
   check over HTTP, the pages, registration, results and leaderboards,
   concurrent submissions of one attempt and concurrent bests of one player,
@@ -141,7 +155,7 @@ only by a better attempt.
   too; every test registers its own players.
 
 ```bash
-./mvnw verify                          # unit and integration tests
+./mvnw verify                          # unit, frontend and integration tests
 docker compose up -d --build           # the app on port 8080
 cd e2e && npm ci && npx playwright install chromium
 npx playwright test                    # browser tests
