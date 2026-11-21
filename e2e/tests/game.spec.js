@@ -43,6 +43,28 @@ test("a guest moves between pictures, back and forth, without the page reloading
     expect(await page.evaluate(() => window.samePage)).toBe(true);
 });
 
+test("a picture that fails to load leaves the current one playable, and loads when asked again", async ({ page }) => {
+    await page.goto("/play/bus");
+    const title = page.locator("#game h1");
+    // The server is unreachable for the house, once.
+    await page.route("**/api/levels/house", (route) => route.fulfill({ status: 503 }), { times: 1 });
+
+    await page.getByRole("link", { name: "02 House" }).click();
+
+    await expect(page.getByText("Something went wrong")).toBeVisible();
+    await expect(page.getByText("The server answered 503")).toBeVisible();
+    await expect(page).toHaveURL(/\/play\/bus$/);
+    await expect(title).toHaveText("Bus");
+    await page.locator('#board-svg g.piece[data-index="0"]').click();
+    await page.getByRole("button", { name: "Turn 45° clockwise" }).click();
+    await expect(page.locator("#moves")).toHaveText("1");
+    await expect(page.getByText("Something went wrong")).toBeHidden();
+
+    await page.getByRole("link", { name: "02 House" }).click();
+    await expect(page).toHaveURL(/\/play\/house$/);
+    await expect(title).toHaveText("House");
+});
+
 test("a picture that is not built yet is not accepted", async ({ page }) => {
     await page.goto("/play/bus");
 
