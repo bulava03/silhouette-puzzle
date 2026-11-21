@@ -1,5 +1,5 @@
-// The one call the game makes, with the CSRF token Spring Security keeps in a cookie.
-import type { SubmitRequest, SubmitResult } from "./types";
+// The game's calls to the server, with the CSRF token Spring Security keeps in a cookie.
+import type { AttemptStarted, Level, SubmitRequest, SubmitResult } from "./types";
 
 /** A failed call, with the HTTP status and the problem detail the server gave. */
 export class ApiError extends Error {
@@ -13,12 +13,12 @@ function csrfToken(): string {
     return match ? decodeURIComponent(match[1]) : "";
 }
 
-async function post<T>(url: string, body: unknown): Promise<T> {
+async function call<T>(method: "GET" | "POST", url: string, body?: unknown): Promise<T> {
     const response = await fetch(url, {
-        method: "POST",
+        method,
         credentials: "same-origin",
         headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": csrfToken() },
-        body: JSON.stringify(body),
+        body: body === undefined ? undefined : JSON.stringify(body),
     });
     if (!response.ok) {
         const problem: { detail?: string } = await response.json().catch(() => ({}));
@@ -27,7 +27,18 @@ async function post<T>(url: string, body: unknown): Promise<T> {
     return response.json() as Promise<T>;
 }
 
+const levelUrl = (levelId: string) => "/api/levels/" + encodeURIComponent(levelId);
+
+export function getLevel(levelId: string): Promise<Level> {
+    return call("GET", levelUrl(levelId));
+}
+
+/** Starts the clock on a level; only for a logged-in player. */
+export async function startAttempt(levelId: string): Promise<string> {
+    return (await call<AttemptStarted>("POST", levelUrl(levelId) + "/attempts")).attemptId;
+}
+
 /** Sends every part's placement; the server decides whether the picture is complete. */
 export function checkPicture(levelId: string, request: SubmitRequest): Promise<SubmitResult> {
-    return post("/api/levels/" + encodeURIComponent(levelId) + "/check", request);
+    return call("POST", levelUrl(levelId) + "/check", request);
 }

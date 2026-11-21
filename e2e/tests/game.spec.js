@@ -11,6 +11,38 @@ test("a guest builds the house and gets a verdict without a place on the board",
     await expect(page.getByText("Log in to put your times on the leaderboard.")).toBeVisible();
 });
 
+test("a guest moves between pictures, back and forth, without the page reloading", async ({ page }) => {
+    await page.goto("/play/bus");
+    // A reload would wipe this mark.
+    await page.evaluate(() => { window.samePage = true; });
+    const title = page.locator("#game h1");
+
+    await page.getByRole("link", { name: "02 House" }).click();
+    await expect(page).toHaveURL(/\/play\/house$/);
+    await expect(title).toHaveText("House");
+    await expect(page).toHaveTitle("House · Silhouette");
+    await buildPicture(page, "house");
+    await page.getByRole("button", { name: "Check picture" }).click();
+    await expect(page.getByText("Picture complete!")).toBeVisible();
+
+    await page.getByRole("link", { name: "Next picture" }).click();
+    await expect(page).toHaveURL(/\/play\/rocket$/);
+    await expect(title).toHaveText("Rocket");
+    await expect(page.getByText("Picture complete!")).toBeHidden();
+    await expect(page.locator("#moves")).toHaveText("0");
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/play\/house$/);
+    await expect(title).toHaveText("House");
+    await page.locator('#board-svg g.piece[data-index="0"]').click();
+    await page.getByRole("button", { name: "Turn 45° clockwise" }).click();
+    await expect(page.locator("#moves")).toHaveText("1");
+    await page.getByRole("button", { name: "Restart level" }).click();
+    await expect(page.locator("#moves")).toHaveText("0");
+
+    expect(await page.evaluate(() => window.samePage)).toBe(true);
+});
+
 test("a picture that is not built yet is not accepted", async ({ page }) => {
     await page.goto("/play/bus");
 
@@ -45,7 +77,10 @@ test("a registered player builds a picture and sees it on the levels page and th
     await page.getByRole("button", { name: "Register" }).click();
     await expect(page.locator(".account__name")).toContainText(name);
 
-    await page.goto("/play/house");
+    // Opened from another picture's tabs, the house gets its timed attempt from the API.
+    await page.goto("/play/bus");
+    await page.getByRole("link", { name: "02 House" }).click();
+    await expect(page.locator("#game h1")).toHaveText("House");
     await buildPicture(page, "house");
     await page.getByRole("button", { name: "Check picture" }).click();
     await expect(page.getByText("Picture complete!")).toBeVisible();

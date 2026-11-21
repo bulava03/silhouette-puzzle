@@ -1,5 +1,5 @@
 // What the server sends and expects, mirroring the Java records of the same
-// names: the level the game page carries and the check endpoint's body and verdict.
+// names: levels, attempts, and the check endpoint's body and verdict.
 
 /** A point on the board; x grows to the right, y downwards, as in SVG. */
 export interface Point {
@@ -21,10 +21,29 @@ export interface Piece {
     startRotation: number;
 }
 
-/** A level as the game page carries it: never the reference solution. */
+/** A level as the game gets it: never the reference solution. */
 export interface Level {
+    id: string;
+    name: string;
+    number: number;
+    /** The colour of the silhouette's edge. */
+    accent: string;
+    /** The id of the level after this one. */
+    next: string;
     silhouette: Outline[];
     pieces: Piece[];
+}
+
+/** One level in the level tabs. */
+export interface LevelTab {
+    id: string;
+    name: string;
+    number: number;
+    accent: string;
+}
+
+export interface AttemptStarted {
+    attemptId: string;
 }
 
 /** Where a part lies, in silhouette coordinates. */

@@ -1,6 +1,6 @@
 // Everything the game page shows, and every way it can change. Pure, so the
 // rules of play can be tested without a browser.
-import { flipped, snap, turned, type Layout, type Pose, type Vec } from "../geometry";
+import { flipped, layOut, snap, turned, type Layout, type Pose, type Vec } from "../geometry";
 import type { Level, SubmitResult } from "../types";
 
 /** What the last check said, if anything is shown. */
@@ -20,6 +20,13 @@ export interface Flash {
 export interface GameState {
     level: Level;
     layout: Layout;
+    /**
+     * Counts the starts of a level on this page, so an answer that comes back
+     * after the player moved on to another level or started over is dropped.
+     */
+    round: number;
+    /** When the clock started, by the page's clock. */
+    startedAt: number;
     pieces: Pose[];
     /** Drawing order, bottom first: a part comes on top when picked up and stays there. */
     order: number[];
@@ -38,6 +45,7 @@ export interface GameState {
 }
 
 export type Action =
+    | { type: "start"; level: Level; attemptId: string | null; at: number }
     | { type: "select"; i: number | null }
     | { type: "grab"; i: number; at: Vec }
     | { type: "drag"; at: Vec }
@@ -46,17 +54,21 @@ export type Action =
     | { type: "flip"; axis: "horizontal" | "vertical" }
     | { type: "fade"; id: number }
     | { type: "checking" }
-    | { type: "checked"; result: SubmitResult; elapsedMs: number }
-    | { type: "expired"; elapsedMs: number }
-    | { type: "failed"; message: string };
+    | { type: "checked"; round: number; result: SubmitResult; at: number }
+    | { type: "expired"; round: number; at: number }
+    | { type: "failed"; round: number; message: string };
 
 /** How far from the board's edge a dragged part's origin has to stay. */
 const EDGE = 0.2;
 
-export function initialState(level: Level, layout: Layout, attemptId: string | null): GameState {
+/** A level laid out afresh, with the clock starting at {@code at}. */
+export function initialState(level: Level, attemptId: string | null, at: number, round = 0): GameState {
+    const layout = layOut(level);
     return {
         level,
         layout,
+        round,
+        startedAt: at,
         pieces: layout.start.map((p) => ({ ...p })),
         order: layout.start.map((_, i) => i),
         selected: null,
@@ -94,7 +106,10 @@ function reorient(state: GameState, change: (p: Pose) => Pose): GameState {
 }
 
 export function reduce(state: GameState, action: Action): GameState {
+    if ("round" in action && action.round !== state.round) return state;
     switch (action.type) {
+        case "start":
+            return initialState(action.level, action.attemptId, action.at, state.round + 1);
         case "select":
             return { ...state, selected: action.i, order: action.i === null ? state.order : toTop(state.order, action.i) };
         case "grab": {
@@ -137,7 +152,7 @@ export function reduce(state: GameState, action: Action): GameState {
             const { result } = action;
             if (result.solved) {
                 // A player's time comes from the server; a guest only has the page's clock.
-                const timeMs = result.timeMs ?? action.elapsedMs;
+                const timeMs = result.timeMs ?? action.at - state.startedAt;
                 return {
                     ...state,
                     busy: false,
@@ -151,7 +166,7 @@ export function reduce(state: GameState, action: Action): GameState {
             return { ...state, busy: false, result: { kind: "missed", percentOff } };
         }
         case "expired":
-            return { ...state, busy: false, attemptId: null, stoppedAt: action.elapsedMs, result: { kind: "expired" } };
+            return { ...state, busy: false, attemptId: null, stoppedAt: action.at - state.startedAt, result: { kind: "expired" } };
         case "failed":
             return { ...state, busy: false, result: { kind: "error", message: action.message } };
     }

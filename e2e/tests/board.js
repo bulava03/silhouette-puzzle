@@ -19,16 +19,18 @@ export function targetsOf(levelId) {
     }));
 }
 
-/** The offset from silhouette coordinates to board coordinates, read off the page. */
-function boardOffset(page) {
-    return page.evaluate(() => {
-        const shapes = JSON.parse(document.getElementById("game").dataset.shapes);
-        const drawn = Array.from(document.querySelectorAll("#board-svg clipPath polygon"))
-            .flatMap((polygon) => Array.from(polygon.points));
-        const given = shapes.silhouette.flatMap((part) => part.vertices);
-        const min = (points, axis) => Math.min(...points.map((p) => p[axis]));
-        return { x: min(drawn, "x") - min(given, "x"), y: min(drawn, "y") - min(given, "y") };
-    });
+/**
+ * The offset from silhouette coordinates to board coordinates: where the
+ * board draws the silhouette against where the catalog has it. The
+ * silhouette is the union of the parts in place, so its corner is theirs.
+ */
+async function boardOffset(page, levelId) {
+    const level = catalog.levels.find((l) => l.id === levelId);
+    const given = level.parts.flatMap((part) => part.outline);
+    const drawn = await page.evaluate(() => Array.from(document.querySelectorAll("#board-svg clipPath polygon"))
+        .flatMap((polygon) => Array.from(polygon.points, (p) => [p.x, p.y])));
+    const min = (points, axis) => Math.min(...points.map((p) => p[axis]));
+    return { x: min(drawn, 0) - min(given, 0), y: min(drawn, 1) - min(given, 1) };
 }
 
 /**
@@ -87,7 +89,7 @@ async function drag(page, index, to) {
 /** Builds the picture on the open game page: all of it, or only its first parts. */
 export async function buildPicture(page, levelId, parts) {
     await page.locator("#board-svg g.piece").first().waitFor();
-    const offset = await boardOffset(page);
+    const offset = await boardOffset(page, levelId);
     const targets = targetsOf(levelId).slice(0, parts);
     for (let i = 0; i < targets.length; i++) {
         await orient(page, i, targets[i]);

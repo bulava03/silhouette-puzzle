@@ -38,9 +38,9 @@ import jakarta.validation.Valid;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * The pages, rendered on the server. The game page is the only one with a
- * script, and it gets just what it needs: the silhouette and the parts of
- * its level and, for a logged-in player, a freshly started timed attempt.
+ * The pages, rendered on the server. The game page hands its game the level
+ * it opens with, the level tabs and, for a logged-in player, a freshly
+ * started timed attempt; from there the game moves between levels itself.
  */
 @Controller
 public class PageController {
@@ -54,10 +54,11 @@ public class PageController {
     private final SecurityContextRepository contexts;
     private final JsonMapper json;
     private final Svg svg;
+    private final LevelViews views;
 
     public PageController(LevelService levels, PlayerService players, AttemptService attempts,
                           AuthenticationManager authentication, SecurityContextRepository contexts,
-                          JsonMapper json, Svg svg) {
+                          JsonMapper json, Svg svg, LevelViews views) {
         this.levels = levels;
         this.players = players;
         this.attempts = attempts;
@@ -65,6 +66,7 @@ public class PageController {
         this.contexts = contexts;
         this.json = json;
         this.svg = svg;
+        this.views = views;
     }
 
     @ModelAttribute
@@ -90,8 +92,8 @@ public class PageController {
         if (level.isEmpty()) {
             return "not-found";
         }
-        model.addAttribute("levelJson", json.writeValueAsString(
-                Map.of("silhouette", level.get().silhouette(), "pieces", level.get().pieces())));
+        model.addAttribute("levelJson", json.writeValueAsString(views.view(id)));
+        model.addAttribute("tabsJson", json.writeValueAsString(views.tabs()));
         model.addAttribute("attemptId", me == null ? null : attempts.start(level.get(), me).id());
         return "play";
     }

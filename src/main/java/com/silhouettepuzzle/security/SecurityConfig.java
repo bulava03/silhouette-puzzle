@@ -18,7 +18,8 @@ import org.springframework.security.web.servlet.util.matcher.PathPatternRequestM
 
 /**
  * Session-based security. Every page is open and the game can be played as
- * a guest; the only JSON endpoint is the picture check, and a logged-in
+ * a guest: the game loads levels and checks pictures through open JSON
+ * endpoints. Only a logged-in player can start a timed attempt, and the
  * player's session is what makes a solved picture count.
  */
 @Configuration(proxyBeanMethods = false)
@@ -29,7 +30,9 @@ public class SecurityConfig {
             throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.GET, "/api/levels/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/levels/*/check").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/levels/*/attempts").authenticated()
                         .requestMatchers("/api/**").denyAll()
                         .anyRequest().permitAll())
                 // The game script reads the token from the XSRF-TOKEN cookie and

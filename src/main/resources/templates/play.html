@@ -5,32 +5,14 @@
 <header th:replace="~{fragments :: header('play')}"></header>
 
 <!-- Reading the CSRF token makes the server set the XSRF-TOKEN cookie the game sends back.
-     The game itself (the board and the side panel) is rendered by React from these attributes. -->
+     The game (tabs, board and side panel) is rendered by React from these attributes,
+     and from then on moves between levels without reloading the page. -->
 <main class="game" id="game"
       th:data-csrf="${_csrf.token != null}"
-      th:data-level="${level.id}"
-      th:data-name="${level.name}"
-      th:data-number="${#numbers.formatInteger(level.number, 2)}"
-      th:data-shapes="${levelJson}"
+      th:data-level="${levelJson}"
+      th:data-levels="${tabsJson}"
       th:data-attempt="${attemptId}"
-      th:data-guest="${me == null}"
-      th:data-accent="${svg.accent(index)}"
-      th:data-next="@{/play/{id}(id=${next.id})}"
-      th:data-leaderboard="@{/leaderboard(level=${level.id})}">
-    <section class="game__board" aria-label="Board">
-        <nav class="tabs" aria-label="Levels">
-            <a class="tab" th:each="tab, iter : ${levels}" th:href="@{/play/{id}(id=${tab.id})}"
-               th:text="${#numbers.formatInteger(tab.number, 2)} + ' ' + ${tab.name}"
-               th:style="'--accent: ' + ${svg.accent(iter.index)}"
-               th:attr="aria-current=${tab.id == level.id} ? 'page' : null">01 Bus</a>
-        </nav>
-        <div class="board card" id="board"></div>
-        <p class="hint">Drag the parts onto the silhouette. Some lie turned or mirrored: select one to turn or flip it.
-            Corners snap together when they come close.</p>
-    </section>
-
-    <aside class="game__side" id="game-side" aria-label="Status and controls"></aside>
-</main>
+      th:data-guest="${me == null}"></main>
 
 <script type="module" th:src="@{/js/game.js}"></script>
 </body>

@@ -8,6 +8,7 @@ const square = (size: number) => ({
 
 /** A 2×2 silhouette made of two 1×2 parts, one of them handed out turned. */
 const level: Level = {
+    id: "square", name: "Square", number: 1, accent: "#6BD8DE", next: "square",
     silhouette: [square(2)],
     pieces: [
         { name: "Left", color: "#FF0000", outline: { vertices: [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 2 }, { x: 0, y: 2 }] }, startRotation: 0 },

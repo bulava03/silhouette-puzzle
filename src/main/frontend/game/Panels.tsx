@@ -2,19 +2,20 @@
 // selected part, and what the last check said.
 import type { Dispatch, ReactNode } from "react";
 import { clock } from "../geometry";
-import type { Piece } from "../types";
+import type { Level, Piece } from "../types";
 import type { Action, Result } from "./state";
+import { inPlace, playUrl, twoDigits } from "./Tabs";
 
 export function StatusPanel({ name, number, parts, timeMs, moves }: {
     name: string;
-    number: string;
+    number: number;
     parts: number;
     timeMs: number;
     moves: number;
 }) {
     return (
         <div className="card panel">
-            <span className="panel__eyebrow">Level {number} · <span id="part-count">{parts}</span> parts</span>
+            <span className="panel__eyebrow">Level {twoDigits(number)} · <span id="part-count">{parts}</span> parts</span>
             <h1 className="title">{name}</h1>
             <div className="meters">
                 <div className="meter">
@@ -91,11 +92,11 @@ export function ToolPanel({ piece, solved, busy, dispatch, onCheck, onRestart }:
     );
 }
 
-export function ResultBanner({ result, guest, nextUrl, leaderboardUrl, onRestart }: {
+export function ResultBanner({ result, guest, level, onOpen, onRestart }: {
     result: Result | null;
     guest: boolean;
-    nextUrl: string;
-    leaderboardUrl: string;
+    level: Level;
+    onOpen: (levelId: string) => void;
     onRestart: () => void;
 }) {
     switch (result?.kind) {
@@ -110,8 +111,9 @@ export function ResultBanner({ result, guest, nextUrl, leaderboardUrl, onRestart
                         className="mono" id="solved-moves">{result.moves}</strong> moves.</span>
                     <span className="result__note" id="solved-note">{note}</span>
                     <div className="result__actions">
-                        <a className="button button--green" href={nextUrl}>Next picture</a>
-                        <a href={leaderboardUrl}>Leaderboard →</a>
+                        <a className="button button--green" href={playUrl(level.next)}
+                           onClick={(event) => inPlace(event, () => onOpen(level.next))}>Next picture</a>
+                        <a href={"/leaderboard?level=" + encodeURIComponent(level.id)}>Leaderboard →</a>
                     </div>
                 </div>
             );

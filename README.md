@@ -55,8 +55,21 @@ own MongoDB instead, start it on `localhost:27017` and run
 
 ## Architecture
 
-The server code lives in `src/main/java`, the browser code in
-[`src/main/frontend`](src/main/frontend):
+One Spring Boot application serves everything: the pages, rendered on the
+server with Thymeleaf, and a small JSON API for the game.
+
+The game is one page whose layout never changes: tabs, board, panel. Only
+the picture on it does. So it is a React application in TypeScript, mounted
+into that page: moving to another picture, to the next one after a win, or
+starting over loads just the new level and, for a logged-in player, a new
+timed attempt from the API, and redraws the board in place, without
+reloading the page. The address follows along, so every picture keeps its
+own link and the browser's back button works. The game's markup and its
+behaviour live together in components, and everything on the page follows
+from one state. The levels, leaderboard and login pages stay server-rendered
+HTML.
+
+### Server: `src/main/java`
 
 ```
 config/      game beans (geometry, clock) and the Liquibase runner
@@ -65,25 +78,57 @@ entity/      Level, Piece, Player, Attempt
 dto/         what crosses the boundary: SubmitRequest, SubmitResult, RegisterForm
 repository/  Spring Data repositories
 service/     levels, players and their results, attempts and checking
-controller/  the pages and the one JSON endpoint
+controller/  the pages and the game's JSON API
 geometry/    the puzzle geometry on JTS, free of Spring
-
-frontend/
-  types.ts     the level and the check, as the Java records send them
-  geometry.ts  the board's geometry: poses, the tray, snapping
-  void.ts      the starry silhouettes; levels.ts draws them on the levels page
-  game/        the game in React: state (a pure reducer), Board, Piece, Panels
 ```
 
-Every page is rendered on the server with Thymeleaf. The game itself, the
-SVG board and the panel beside it, is a React island in TypeScript, mounted
-into the game page; Vite builds it into the jar's static resources as part of
-the Maven build, with Node fetched by the build itself. Its page carries just what it needs:
-the silhouette and the parts of the level, never the reference solution, and
-for a logged-in player the id of a timed attempt the server starts as it
-renders the page. The board makes a single call, `POST /api/levels/{id}/check`,
-with the placement of every part, and gets back the verdict and, for a solved
-timed attempt, the server-measured time and the player's place.
+### Browser: [`src/main/frontend`](src/main/frontend)
+
+```
+types.ts      the level and the check, mirroring the Java records
+geometry.ts   the board's geometry: poses, the tray layout, snapping
+api.ts        the check request, with the CSRF token
+void.ts       the starry silhouettes with a glowing edge
+levels.ts     the levels page: draws its sky and silhouettes
+game/
+  main.tsx    reads the opening level from the page and mounts the game
+  state.ts    every rule of play as a pure reducer
+  Game.tsx    loading levels and attempts, the address, the clock, the check
+  Tabs.tsx    the level tabs, links that open a level in place
+  Board.tsx   the SVG board: dragging, the silhouette, snap flashes
+  Piece.tsx   one part, memoised so a drag redraws only that part
+  Panels.tsx  level and meters, the tools, the verdict
+```
+
+The game page opens with what the game needs, in data attributes: the level
+in the address, the level tabs and, for a logged-in player, a timed attempt
+the server starts as it renders the page. From there the game talks to the
+API:
+
+| Call                               | For                                                    |
+|------------------------------------|--------------------------------------------------------|
+| `GET /api/levels/{id}`             | another level: silhouette, parts, colour, the next level; never the solution |
+| `POST /api/levels/{id}/attempts`   | a new timed attempt, for a logged-in player            |
+| `POST /api/levels/{id}/check`      | the verdict on the placement of every part and, for a solved timed attempt, the server-measured time and the player's place |
+
+All state lives in one reducer (`game/state.ts`): the level, parts,
+selection, drag, moves and the last verdict, so the rules of play are tested
+without a browser. Every start of a level counts as a new round, and an
+answer that arrives after the player has moved on is dropped.
+
+### Build
+
+The frontend is part of the Maven build, so `./mvnw package` and the Docker
+image need no Node installed: the
+[frontend-maven-plugin](https://github.com/eirslett/frontend-maven-plugin)
+fetches Node 24 into `target/node`, then runs `npm ci`, type-checks with
+`tsc`, and Vite writes `js/game.js` and `js/levels.js` into the jar's static
+resources. Vitest runs in Maven's `test` phase, next to JUnit.
+
+To work on the frontend (with Node 24 installed), run the server with
+`./mvnw spring-boot:run` and, in `src/main/frontend`, `npm run watch`: Vite
+rebuilds the scripts into `target/classes/static` on every change, and a page
+reload picks them up.
 
 ### Levels
 
@@ -128,7 +173,7 @@ What a request can change, and what guards it:
 |-------------------------|----------------------------------|---------------------------------------------------------|
 | Registration form       | creates a player                 | validation, unique name regardless of case, BCrypt, CSRF |
 | Login, logout           | the session                      | Spring Security, CSRF                                   |
-| Opening a game page     | a temporary attempt, logged-in players only | checkable for a day, removed after two       |
+| Opening a game page or starting a picture in it | a temporary attempt, logged-in players only | checkable for a day, removed after two; CSRF |
 | Checking a picture      | **the player's best time**       | time measured on the server; the attempt must be the player's own, open and not expired; it counts once; geometry checked with JTS |
 
 The game counts moves too, but only for the player: the server cannot
@@ -144,13 +189,14 @@ only by a better attempt.
 - **Frontend tests** (Vitest) cover the board's geometry and the rules of
   play in the game's reducer: dragging, snapping, turning, flipping, moves
   and every verdict.
-- **Integration tests** run against MongoDB in Testcontainers: the picture
-  check over HTTP, the pages, registration, results and leaderboards,
+- **Integration tests** run against MongoDB in Testcontainers: the game's
+  API (levels without their solutions, attempts for players only, the check), the pages, registration, results and leaderboards,
   concurrent submissions of one attempt and concurrent bests of one player,
   and the Liquibase changelog on a database holding data in an older shape.
 - **Browser tests** (Playwright, [`e2e/`](e2e)) build pictures by dragging,
-  turning and flipping parts as a player would, and go through registration
-  and login, errors included. They drive the application as
+  turning and flipping parts as a player would, move between pictures, back
+  and forth, without the page reloading, and go through registration and
+  login, errors included. They drive the application as
   `docker compose` runs it, so the executable jar and the image are covered
   too; every test registers its own players.
 
@@ -162,7 +208,8 @@ npx playwright test                    # browser tests
 npm run screenshots                    # the screenshots in this README
 ```
 
-GitHub Actions runs both suites on every push.
+GitHub Actions runs the Maven build with all its tests on every push, then
+starts the image with `docker compose` and runs the browser tests against it.
 
 ## License
 

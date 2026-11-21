@@ -10,13 +10,12 @@ const FLASH_MS = 360;
 interface Props {
     state: GameState;
     dispatch: Dispatch<Action>;
-    name: string;
-    accent: string;
 }
 
 /** The board: the silhouette on the left, the parts in the tray to its right. */
-export function Board({ state, dispatch, name, accent }: Props) {
+export function Board({ state, dispatch }: Props) {
     const { layout, level } = state;
+    const { name, accent } = level;
     const svg = useRef<SVGSVGElement>(null);
     const voidLayer = useRef<SVGGElement>(null);
     const silhouette = useRef<Silhouette | null>(null);

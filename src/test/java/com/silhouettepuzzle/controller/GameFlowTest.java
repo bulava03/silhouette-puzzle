@@ -73,6 +73,34 @@ class GameFlowTest {
     }
 
     @Test
+    void theGameLoadsALevelWithoutItsSolution() throws Exception {
+        mvc.perform(get("/api/levels/rocket"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Rocket"))
+                .andExpect(jsonPath("$.number").value(3))
+                .andExpect(jsonPath("$.accent").value("#E4AC59"))
+                .andExpect(jsonPath("$.next").value("sailboat"))
+                .andExpect(jsonPath("$.pieces.length()").value(10))
+                .andExpect(jsonPath("$.silhouette").isArray())
+                .andExpect(jsonPath("$.solution").doesNotExist());
+        mvc.perform(get("/api/levels/locomotive")).andExpect(jsonPath("$.next").value("bus"));
+        mvc.perform(get("/api/levels/nope")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void onlyAPlayerStartsATimedAttempt() throws Exception {
+        String attemptId = json.readTree(mvc.perform(post("/api/levels/bus/attempts").with(csrf()).with(user(alice)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString()).get("attemptId").asString();
+        clock.advance(Duration.ofSeconds(30));
+        check("bus", attemptId, solutionOf("bus"), alice).andExpect(jsonPath("$.timeMs").value(30_000));
+
+        mvc.perform(post("/api/levels/bus/attempts").with(csrf())).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/levels/bus/attempts").with(user(alice))).andExpect(status().isForbidden());
+        mvc.perform(post("/api/levels/nope/attempts").with(csrf()).with(user(alice))).andExpect(status().isNotFound());
+    }
+
+    @Test
     void guestsGetAVerdictButNoTime() throws Exception {
         List<Placement> wrong = new ArrayList<>(solutionOf("bus"));
         wrong.set(0, new Placement(20, 20, 0, false));
