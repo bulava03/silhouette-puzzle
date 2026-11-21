@@ -1,10 +1,10 @@
 # Silhouette Puzzle
 
 A picture-building puzzle game in the browser. Every level is a picture,
-from a sailboat to a steam locomotive, cut into its own parts; the player drags, turns and
-flips the parts until they fill the picture's dark silhouette. The server
-does all the geometry and keeps the time, so a record on the leaderboard
-cannot be faked from the browser.
+from a sailboat to a steam locomotive, cut into its own parts; the player
+drags, turns and flips the parts until they fill the picture's dark
+silhouette. The server does all the geometry and keeps the time, so a record
+on the leaderboard cannot be faked from the browser.
 
 | Choosing a picture | Building the bus |
 |---|---|
@@ -20,6 +20,9 @@ cannot be faked from the browser.
 - **Playing** by dragging parts onto the silhouette, turning them in 45°
   steps and mirroring them left to right or top to bottom; corners snap
   together when they come close. Some parts start turned or mirrored.
+- **One page for every picture**: switching pictures, going on to the next
+  one or starting over happens in place, without reloading the page, while
+  every picture keeps its own address and the back button works.
 - **Checking on the server**: the parts are placed and united with JTS, and
   a picture counts when gaps, overhangs and overlaps stay within 1% of the
   silhouette.
